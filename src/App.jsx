@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import useGameStore from './context/useGameStore';
+import { useAuth } from './hooks/useAuth';
+import Auth from './components/Auth';
 import Welcome from './components/Welcome';
 import ProfileSetup from './components/ProfileSetup';
 import CommitmentQuestions from './components/CommitmentQuestions';
@@ -14,6 +16,28 @@ import Navigation from './components/Navigation';
 import './App.css';
 
 function App() {
+  const { user, loading } = useAuth();
+
+  // Show loading screen while checking auth
+  if (loading) {
+    return (
+      <div style={styles.loadingContainer}>
+        <h1 style={styles.loadingText}>HABITQUEST</h1>
+      </div>
+    );
+  }
+
+  // Show auth screen if not logged in
+  if (!user) {
+    return <Auth />;
+  }
+
+  // User is logged in, show main app
+  return <MainApp />;
+}
+
+// Main app component (shown after login)
+function MainApp() {
   const [activeTab, setActiveTab] = useState('command');
 
   const {
@@ -192,6 +216,20 @@ function App() {
 const styles = {
   appContainer: {
     paddingBottom: '80px'
+  },
+  loadingContainer: {
+    minHeight: '100vh',
+    backgroundColor: '#000000',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  loadingText: {
+    fontFamily: '"Bebas Neue", sans-serif',
+    fontSize: '2rem',
+    color: '#ffffff',
+    letterSpacing: '0.2em',
+    opacity: 0.5
   }
 };
 

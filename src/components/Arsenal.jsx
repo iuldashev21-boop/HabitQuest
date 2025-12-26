@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react';
 import {
   Flame, Trophy, Calendar, Star, AlertTriangle, Gem,
   ChevronDown, ChevronRight, Settings, Volume2, VolumeX,
-  RotateCcw, Info, X, Check, Award
+  RotateCcw, Info, X, Check, Award, LogOut
 } from 'lucide-react';
 import useGameStore from '../context/useGameStore';
+import { useAuth } from '../hooks/useAuth';
 import { CLASSES, XP_PER_LEVEL } from '../data/gameData';
 import { setSoundEnabled } from '../utils/sounds';
 
@@ -76,6 +77,7 @@ const ACHIEVEMENTS = [
 ];
 
 const Arsenal = () => {
+  const { signOut } = useAuth();
   const {
     username,
     archetype,
@@ -421,6 +423,20 @@ const Arsenal = () => {
                 onClick={() => setShowResetConfirm(true)}
               >
                 Start Over
+              </button>
+            </div>
+
+            {/* Sign Out Button */}
+            <div style={styles.settingRow}>
+              <div style={styles.settingInfo}>
+                <LogOut size={20} color="#888" />
+                <span style={styles.settingLabel}>Sign Out</span>
+              </div>
+              <button
+                style={styles.signOutButton}
+                onClick={signOut}
+              >
+                Sign Out
               </button>
             </div>
 
@@ -801,6 +817,15 @@ const styles = {
     border: '1px solid #7f1d1d',
     borderRadius: '6px',
     color: '#ef4444',
+    fontSize: '0.75rem',
+    cursor: 'pointer'
+  },
+  signOutButton: {
+    padding: '8px 16px',
+    backgroundColor: 'transparent',
+    border: '1px solid #444',
+    borderRadius: '6px',
+    color: '#888',
     fontSize: '0.75rem',
     cursor: 'pointer'
   },
