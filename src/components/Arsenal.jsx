@@ -96,19 +96,23 @@ const Arsenal = () => {
     clearSyncState
   } = useGameStore();
 
-  const handleSignOut = async () => {
+  const handleSignOut = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     try {
       clearSyncState();
-      const { error } = await signOut();
-      if (error) {
-        console.error('Sign out error:', error);
-      }
-      // Force reload to clear all state
-      window.location.href = '/';
+      await signOut();
     } catch (err) {
-      console.error('Sign out exception:', err);
-      window.location.href = '/';
+      console.error('Sign out error:', err);
     }
+
+    // Always redirect
+    setTimeout(() => {
+      window.location.replace('/');
+    }, 100);
   };
 
   const [habitsExpanded, setHabitsExpanded] = useState(false);
@@ -175,19 +179,27 @@ const Arsenal = () => {
   };
 
   // Handle reset
-  const handleReset = async () => {
-    try {
-      // Clear local state
-      resetGame();
-      clearSyncState();
-      setShowResetConfirm(false);
-      setSettingsOpen(false);
-      // Force reload to restart fresh
-      window.location.href = '/';
-    } catch (err) {
-      console.error('Reset error:', err);
-      window.location.href = '/';
+  const handleReset = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+
+    // Clear all state
+    resetGame();
+    clearSyncState();
+
+    // Clear all localStorage
+    localStorage.removeItem('habitquest-storage');
+    localStorage.removeItem('habitquest-remember-me');
+
+    setShowResetConfirm(false);
+    setSettingsOpen(false);
+
+    // Force reload
+    setTimeout(() => {
+      window.location.replace('/');
+    }, 100);
   };
 
   return (

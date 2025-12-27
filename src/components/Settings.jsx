@@ -19,25 +19,40 @@ const Settings = ({ onClose }) => {
     soundManager.setEnabled(newValue);
   };
 
-  const handleResetGame = () => {
+  const handleResetGame = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Clear all state
     resetGame();
     clearSyncState();
-    // Clear localStorage
+
+    // Clear all localStorage
     localStorage.removeItem('habitquest-storage');
+    localStorage.removeItem('habitquest-remember-me');
+
+    // Close modal and reload
     onClose();
-    // Force reload to reset all state
-    window.location.href = '/';
+    setTimeout(() => {
+      window.location.replace('/');
+    }, 100);
   };
 
-  const handleSignOut = async () => {
+  const handleSignOut = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     try {
       clearSyncState();
       await signOut();
-      window.location.href = '/';
     } catch (err) {
       console.error('Sign out error:', err);
-      window.location.href = '/';
     }
+
+    // Always redirect, even if signOut fails
+    setTimeout(() => {
+      window.location.replace('/');
+    }, 100);
   };
 
   return (
@@ -127,6 +142,7 @@ const Settings = ({ onClose }) => {
           <div style={styles.section}>
             <h3 style={styles.sectionTitle}>Account</h3>
             <button
+              type="button"
               style={styles.signOutButton}
               onClick={handleSignOut}
             >
@@ -140,6 +156,7 @@ const Settings = ({ onClose }) => {
             <h3 style={styles.sectionTitle}>Danger Zone</h3>
             {!showResetConfirm ? (
               <button
+                type="button"
                 style={styles.resetButton}
                 onClick={() => setShowResetConfirm(true)}
               >
@@ -153,12 +170,14 @@ const Settings = ({ onClose }) => {
                 </p>
                 <div style={styles.confirmButtons}>
                   <button
+                    type="button"
                     style={styles.cancelButton}
                     onClick={() => setShowResetConfirm(false)}
                   >
                     Cancel
                   </button>
                   <button
+                    type="button"
                     style={styles.confirmResetButton}
                     onClick={handleResetGame}
                   >
