@@ -1,87 +1,134 @@
 # HabitQuest - Project Context
 
+> **Last Updated:** December 27, 2025
+> **Status:** Production-ready, deployed on Vercel
+> **Supabase:** Connected and syncing
+
 ## What It Is
+
 HabitQuest is a gamified habit tracking app with a 66-day journey system. Users battle "demons" (bad habits to quit) and build "powers" (good habits to develop). The app uses RPG mechanics (XP, levels, streaks, achievements) to make habit building engaging.
 
+## Current Status
+
+### Working Features
+- User authentication (signup/login/logout via Supabase)
+- Complete onboarding flow (welcome → profile → commitment → archetype → difficulty → habits)
+- Daily habit tracking with completion/relapse mechanics
+- XP system with streak multipliers and perfect day bonuses
+- 66-day Battle Map visualization with phase indicators
+- Side quests (3 random daily bonus tasks)
+- 9 achievements with unlock tracking
+- Records page showing full day history
+- Day lock system (prevents changes after submission until midnight)
+- Supabase sync (profile + daily logs)
+- Responsive dark theme UI
+
+### Supabase Integration
+- **Auth:** Email/password authentication working
+- **Database:** Profiles and daily_logs tables with RLS
+- **Sync:** Bidirectional sync between Zustand store and Supabase
+- **Test Data:** Seeded successfully (TestWarrior account with 26 days of history)
+
+### Project Structure
+```
+habitquest/
+├── .claudeignore          # Claude Code optimization
+├── .env                   # Supabase credentials (gitignored)
+├── CONTEXT.md             # This file
+├── package.json           # Dependencies and scripts
+├── scripts/
+│   └── seedTestData.js    # Test data generator
+├── public/
+│   └── characters/        # Archetype images (specter.png, etc.)
+└── src/
+    ├── App.jsx            # Main app + onboarding flow
+    ├── components/        # All UI components
+    ├── context/
+    │   └── useGameStore.js # Zustand store (state + actions)
+    ├── data/
+    │   └── gameData.js    # Game constants, habits, phases
+    ├── hooks/
+    │   └── useAuth.js     # Auth hook
+    └── lib/
+        ├── supabase.js    # Supabase client
+        └── syncService.js # Sync functions
+```
+
 ## Tech Stack
-- **Frontend:** React 19 + Vite
-- **State:** Zustand with localStorage persistence
+
+- **Frontend:** React 19 + Vite 7
+- **State:** Zustand with localStorage persistence + Supabase sync
 - **Backend:** Supabase (Auth + PostgreSQL)
-- **Styling:** Inline CSS-in-JS (no external CSS framework)
+- **Styling:** Inline CSS-in-JS (no framework)
 - **Icons:** Lucide React
 - **Effects:** Canvas Confetti
+- **Hosting:** Vercel
 
 ## Core Concept: The 66-Day Journey
-Based on habit formation research - 66 days to form a habit. Four phases:
+
+Based on habit formation research. Four phases:
 1. **Fragile (Days 1-22)** - Starting out, highest risk
 2. **Building (Days 23-44)** - Gaining momentum
 3. **Locked In (Days 45-66)** - Near the finish
 4. **FORGED (Day 67+)** - Habit is permanent
 
-## Four Archetypes (Classes)
-Each has unique theme, colors, and character image:
-- **SPECTER** - Shadow/stealth theme (purple #6b21a8)
-- **ASCENDANT** - Light/divine theme (yellow #ca8a04)
-- **WRATH** - Fire/rage theme (red #dc2626)
-- **SOVEREIGN** - Royal/control theme (blue #2563eb)
+## Four Archetypes
+
+| Archetype | Theme | Color | Accent |
+|-----------|-------|-------|--------|
+| SPECTER | Shadow/stealth | Purple | #6b21a8 |
+| ASCENDANT | Light/divine | Yellow | #ca8a04 |
+| WRATH | Fire/rage | Red | #dc2626 |
+| SOVEREIGN | Royal/control | Blue | #2563eb |
+
+Each has unique character image in `public/characters/`.
 
 ## App Screens
 
-### 1. Onboarding Flow
-- `Welcome.jsx` - Intro screen
-- `ProfileSetup.jsx` - Enter username
-- `CommitmentQuestions.jsx` - Assess readiness
-- `ArchetypeSelect.jsx` - Choose class
-- `DifficultySelect.jsx` - Easy/Medium/Extreme
-- `HabitCustomize.jsx` - Select habits (demons + powers)
+### Onboarding (6 steps)
+1. `Welcome.jsx` - Intro screen
+2. `ProfileSetup.jsx` - Enter username
+3. `CommitmentQuestions.jsx` - Assess readiness
+4. `ArchetypeSelect.jsx` - Choose class
+5. `DifficultySelect.jsx` - Easy/Medium/Extreme
+6. `HabitCustomize.jsx` - Select habits
 
-### 2. Main App (4 tabs)
+### Main App (4 tabs via Navigation.jsx)
 - **Command Center** (`Dashboard.jsx`) - Daily habits, submit day, side quests
-- **Battle Map** (`BattleMap.jsx`) - Visual 66-day grid showing progress
+- **Battle Map** (`BattleMap.jsx`) - Visual 66-day grid
 - **Arsenal** (`Arsenal.jsx`) - Stats, achievements, settings, sign out
-- **Records** (`Records.jsx`) - History log of all completed days
+- **Records** (`Records.jsx`) - Day-by-day history log
 
-## Key Features Built
+## Key Mechanics
 
-### Habit System
-- Two types: **Demons** (quit) and **Powers** (build)
-- Frequencies: daily, weekdays, 3x/week, 4x/week
-- XP rewards per habit (10-30 XP based on difficulty)
-- Streak tracking per habit
-- Relapse system for demons (resets habit streak, not journey)
+### Habits
+- **Demons:** Bad habits to quit (can relapse)
+- **Powers:** Good habits to build
+- **Frequencies:** daily, weekdays, 3x/week, 4x/week
+- **XP:** 10-30 per habit based on difficulty
 
-### Progression System
-- XP accumulates across all habits
-- Levels (500 XP per level)
-- Ranks within each archetype (5 levels per rank)
-- Streak multipliers (1.0x to 2.0x based on streak length)
-- Perfect day bonus (+50 XP)
+### Progression
+- 500 XP per level
+- 5 levels per rank (archetype-specific rank names)
+- Streak multipliers: 1.0x → 2.0x based on streak length
+- Perfect day bonus: +50 XP
 
-### Side Quests
-- 3 random bonus tasks per day
-- Rotating pool of wellness activities
-- Extra XP for completion
+### Relapse System
+- Only demons can relapse
+- Resets HABIT streak, NOT 66-day journey
+- 50% XP penalty from that habit
+- +5 XP for honesty
 
-### Achievements (9 total)
-- First Blood, Week Warrior, Two Weeks, Monthly
-- Locked In, FORGED, Centurion
-- Perfect Week, Perfect Month
-
-### Day Lock System
-- After submitting day, habits lock until midnight
-- Prevents gaming the system
-- Auto-resets at midnight local time
-
-## Database Structure (Supabase)
+## Database Schema (Supabase)
 
 ### `profiles` table
-```sql
-id (UUID, PK) - matches auth.users.id
+```
+id (UUID, PK) - matches auth.users.id (FK constraint)
 username, archetype, difficulty
 xp, level, current_streak, longest_streak
 day_started, current_day
-habits (JSONB) - array of habit objects
-achievements (JSONB) - achievement flags
+habits (JSONB)
+achievements (JSONB)
 total_days_completed, perfect_days_count, total_xp_earned
 commitment_answers (JSONB)
 last_completed_date, day_locked_at, last_submit_date
@@ -89,66 +136,88 @@ daily_side_quests, completed_side_quests, side_quests_date
 ```
 
 ### `daily_logs` table
-```sql
+```
 id (UUID, PK)
 user_id (FK to profiles)
-date (DATE) - YYYY-MM-DD
-day_number, xp_earned, is_perfect
-successful_count, total_count, relapse_count
-habits (JSONB) - snapshot of habits that day
+date (DATE, YYYY-MM-DD)
+day_number
 UNIQUE(user_id, date)
 ```
 
 ### Row Level Security
+- Enabled on both tables
 - Users can only read/write their own data
-- Policies on both tables for SELECT, INSERT, UPDATE
 
-## Key Files
+## Sync Architecture
 
-### State Management
-- `src/context/useGameStore.js` - Zustand store (all game state + actions)
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ localStorage│ ←→  │   Zustand   │ ←→  │  Supabase   │
+│  (fallback) │     │   Store     │     │  (primary)  │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
 
-### Data & Config
-- `src/data/gameData.js` - Classes, habits, phases, XP constants
-- `src/lib/supabase.js` - Supabase client
-- `src/lib/syncService.js` - Sync functions for Supabase
-
-### Auth
-- `src/hooks/useAuth.js` - Auth hook (signIn, signUp, signOut)
-- `src/components/Auth.jsx` - Login/signup UI
-
-### Main Components
-- `src/App.jsx` - Router, auth check, onboarding flow
-- `src/components/Dashboard.jsx` - Main daily view
-- `src/components/BattleMap.jsx` - 66-day progress grid
-- `src/components/Arsenal.jsx` - Profile, stats, settings
-- `src/components/Records.jsx` - History log
-- `src/components/Navigation.jsx` - Bottom tab bar
-
-### Assets
-- `public/characters/` - 4 archetype images (specter.png, etc.)
-
-## Sync Flow
-1. **Login** → Load from Supabase → Update Zustand
-2. **Complete Habit** → Update Zustand → Sync to Supabase
-3. **Submit Day** → Update Zustand → Sync profile + daily log
-4. **Logout** → Clear sync state
-
-localStorage acts as offline cache/fallback.
+### Sync Triggers
+- **Login:** loadFromSupabase() → Update store
+- **Complete Habit:** Update store → syncToSupabase()
+- **Relapse:** Update store → syncToSupabase()
+- **Submit Day:** Update store → syncToSupabase() + syncDailyLog()
+- **Complete Side Quest:** Update store → syncToSupabase()
+- **Logout:** clearSyncState()
 
 ## Environment Variables
-```
-VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_ANON_KEY=xxx
+
+```bash
+# .env (gitignored)
+VITE_SUPABASE_URL=https://kwabsvhpitwgyrcosikr.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_...
 ```
 
 ## Scripts
-- `npm run dev` - Start dev server
-- `npm run build` - Production build
-- `npm run seed` - Seed test data (requires SUPABASE_SERVICE_KEY)
 
-## Live URL
-https://habitquest-chi.vercel.app/
+```bash
+npm run dev      # Start dev server (Vite)
+npm run build    # Production build
+npm run preview  # Preview production build
+npm run seed     # Seed test data (requires SUPABASE_SERVICE_KEY + USER_ID)
+```
 
-## GitHub
-https://github.com/iuldashev21-boop/HabitQuest
+### Seed Script Usage
+```bash
+SUPABASE_SERVICE_KEY="sb_secret_..." USER_ID="uuid" npm run seed
+```
+- Requires existing auth user (FK constraint on profiles)
+- Get USER_ID from Supabase Dashboard > Authentication > Users
+
+## URLs
+
+- **Live App:** https://habitquest-chi.vercel.app/
+- **GitHub:** https://github.com/iuldashev21-boop/HabitQuest
+- **Supabase:** https://supabase.com/dashboard/project/kwabsvhpitwgyrcosikr
+
+## Test Account Data (Seeded)
+
+- **Username:** TestWarrior
+- **Archetype:** SPECTER
+- **XP:** 3,411
+- **Level:** 7
+- **Current Streak:** 22 days
+- **Daily Logs:** 26 entries
+
+## Known Considerations
+
+1. **localStorage vs Supabase:** On login, Supabase data takes priority. Clear localStorage if testing fresh sync.
+2. **FK Constraint:** profiles.id must exist in auth.users - can't seed random user IDs
+3. **Timestamps:** day_started and last_completed_date stored as ISO strings in Supabase
+
+## File Quick Reference
+
+| File | Purpose |
+|------|---------|
+| `src/context/useGameStore.js` | All state + actions (~950 lines) |
+| `src/lib/syncService.js` | Supabase CRUD operations |
+| `src/data/gameData.js` | Constants, habits, phases, XP values |
+| `src/components/Dashboard.jsx` | Main daily view |
+| `src/components/BattleMap.jsx` | 66-day grid visualization |
+| `src/components/Arsenal.jsx` | Profile, achievements, settings |
+| `src/App.jsx` | Auth check + onboarding flow |
