@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { clearHabitQuestStorage } from '../lib/storage';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -19,8 +20,8 @@ class ErrorBoundary extends Component {
   };
 
   handleReset = () => {
-    // Clear local storage and reload
-    localStorage.clear();
+    // Clear HabitQuest-specific storage and reload
+    clearHabitQuestStorage();
     window.location.reload();
   };
 

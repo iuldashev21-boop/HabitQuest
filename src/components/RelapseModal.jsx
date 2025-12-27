@@ -31,13 +31,6 @@ const RelapseModal = ({ habit, archetype, onConfirm, onCancel }) => {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.1); }
       }
-      @keyframes flashRed {
-        0% { background-color: #1A1A1A; }
-        25% { background-color: rgba(220, 38, 38, 0.3); }
-        50% { background-color: rgba(220, 38, 38, 0.5); }
-        75% { background-color: rgba(220, 38, 38, 0.3); }
-        100% { background-color: #1A1A1A; }
-      }
     `;
     document.head.appendChild(styleSheet);
 

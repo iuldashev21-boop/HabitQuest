@@ -6,7 +6,13 @@ import { formatDateYMD, parseLocalDate } from '../lib/dates';
 
 // Helper to format date for display
 const formatDateDisplay = (dateStr) => {
-  const date = parseLocalDate(dateStr) || new Date(dateStr);
+  const date = parseLocalDate(dateStr);
+  if (!date) {
+    if (import.meta.env.DEV) {
+      console.warn('[BattleMap] Invalid date format:', dateStr);
+    }
+    return 'Invalid Date';
+  }
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',

@@ -104,41 +104,19 @@ function MainApp({ userId }) {
   // and we've confirmed user has no existing profile
   const [showWelcome, setShowWelcome] = useState(false);
 
-  // Load data from Supabase on mount
-  useEffect(() => {
-    const loadData = async () => {
-      if (userId) {
-        setLoadState('loading');
-        setLoadError(null);
-        try {
-          const result = await loadFromSupabase(userId);
+  // Shared load function used by both initial load and retry
+  const performLoad = async () => {
+    if (!userId) return;
 
-          if (result && result.success) {
-            setLoadState('loaded');
-            // Only show welcome screen if user has no existing profile (new user)
-            if (!result.hasData) {
-              setShowWelcome(true);
-            }
-          } else {
-            setLoadState('error');
-            setLoadError(result?.error?.message || 'Failed to load data');
-          }
-        } catch (err) {
-          setLoadState('error');
-          setLoadError(err.message || 'An unexpected error occurred');
-        }
-      }
-    };
-    loadData();
-  }, [userId, loadFromSupabase]);
-
-  // Handle retry
-  const handleRetry = () => {
     setLoadState('loading');
     setLoadError(null);
-    loadFromSupabase(userId).then(result => {
+
+    try {
+      const result = await loadFromSupabase(userId);
+
       if (result && result.success) {
         setLoadState('loaded');
+        // Only show welcome screen if user has no existing profile (new user)
         if (!result.hasData) {
           setShowWelcome(true);
         }
@@ -146,10 +124,20 @@ function MainApp({ userId }) {
         setLoadState('error');
         setLoadError(result?.error?.message || 'Failed to load data');
       }
-    }).catch(err => {
+    } catch (err) {
       setLoadState('error');
       setLoadError(err.message || 'An unexpected error occurred');
-    });
+    }
+  };
+
+  // Load data from Supabase on mount
+  useEffect(() => {
+    performLoad();
+  }, [userId]);
+
+  // Handle retry - reuse the same load function
+  const handleRetry = () => {
+    performLoad();
   };
 
   // Show loading screen while syncing from Supabase

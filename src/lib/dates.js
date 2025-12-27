@@ -89,11 +89,9 @@ export const getDaysAgo = (daysAgo) => {
  * @returns {number} Day of week (0-6)
  */
 export const getDayOfWeek = (date) => {
-  if (typeof date === 'string') {
-    date = parseLocalDate(date);
-  }
-  if (!date) return null;
-  return date.getDay();
+  const parsedDate = typeof date === 'string' ? parseLocalDate(date) : date;
+  if (!parsedDate) return null;
+  return parsedDate.getDay();
 };
 
 /**
@@ -123,12 +121,12 @@ export const isWeekend = (date) => {
  * @returns {number} Number of days between dates (positive if date2 > date1)
  */
 export const daysBetween = (date1, date2) => {
-  if (typeof date1 === 'string') date1 = parseLocalDate(date1);
-  if (typeof date2 === 'string') date2 = parseLocalDate(date2);
-  if (!date1 || !date2) return null;
+  const parsedDate1 = typeof date1 === 'string' ? parseLocalDate(date1) : date1;
+  const parsedDate2 = typeof date2 === 'string' ? parseLocalDate(date2) : date2;
+  if (!parsedDate1 || !parsedDate2) return null;
 
-  const start = startOfLocalDay(date1);
-  const end = startOfLocalDay(date2);
+  const start = startOfLocalDay(parsedDate1);
+  const end = startOfLocalDay(parsedDate2);
   const diffMs = end.getTime() - start.getTime();
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 };

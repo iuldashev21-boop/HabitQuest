@@ -1153,8 +1153,9 @@ const useGameStore = create(
       migrate: (persistedState, version) => {
         // Migration stub for future schema changes
         // Add migrations here as needed when version increments
-        if (version === 0) {
-          // Migration from version 0 to 1 (example)
+        // Handle pre-versioned data (undefined/null) and version 0
+        if (!version || version === 0) {
+          // Migration from version 0 to 1
           return { ...persistedState };
         }
         return persistedState;

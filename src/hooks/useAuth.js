@@ -8,6 +8,7 @@ export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -36,10 +37,13 @@ export const useAuth = () => {
         // First check remember me status
         await checkRememberMe();
 
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error('Auth session error:', error);
+        if (sessionError) {
+          console.error('Auth session error:', sessionError);
+          if (isMounted) {
+            setError(sessionError.message);
+          }
         }
 
         if (isMounted) {
@@ -51,6 +55,7 @@ export const useAuth = () => {
         console.error('Auth initialization error:', err);
         if (isMounted) {
           setUser(null);
+          setError(err.message || 'Authentication failed');
           setLoading(false);
           setInitialized(true);
         }
@@ -96,18 +101,24 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    const { error: signOutError } = await supabase.auth.signOut();
+    return { error: signOutError };
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   return {
     user,
     loading,
     initialized,
+    error,
     isAuthenticated: !!user,
     signUp,
     signIn,
-    signOut
+    signOut,
+    clearError
   };
 };
 
