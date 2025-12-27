@@ -9,6 +9,19 @@ import { supabase } from './supabase';
  */
 export const saveUserProfile = async (userId, profileData) => {
   try {
+    // Debug: Check if we have a valid session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (import.meta.env.DEV) {
+      console.log('[Sync] Saving profile for user:', userId);
+      console.log('[Sync] Session exists:', !!session);
+      console.log('[Sync] Session user:', session?.user?.id);
+    }
+
+    if (!session) {
+      console.error('[Sync] No active session - cannot save');
+      return { success: false, error: { message: 'No active session' } };
+    }
+
     const { error } = await supabase
       .from('profiles')
       .upsert({
@@ -41,13 +54,16 @@ export const saveUserProfile = async (userId, profileData) => {
       });
 
     if (error) {
-      console.error('Error saving profile:', error);
+      console.error('[Sync] Error saving profile:', error.message, error.code, error.details);
       return { success: false, error };
     }
 
+    if (import.meta.env.DEV) {
+      console.log('[Sync] Profile saved successfully');
+    }
     return { success: true };
   } catch (err) {
-    console.error('Exception saving profile:', err);
+    console.error('[Sync] Exception saving profile:', err);
     return { success: false, error: err };
   }
 };
