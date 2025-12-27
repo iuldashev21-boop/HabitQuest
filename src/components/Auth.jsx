@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 
 const Auth = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState('signin'); // 'signin', 'signup', 'reset'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -11,6 +12,8 @@ const Auth = () => {
   const [message, setMessage] = useState(null);
 
   const { signUp, signIn } = useAuth();
+  const isSignUp = mode === 'signup';
+  const isReset = mode === 'reset';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,7 +21,17 @@ const Auth = () => {
     setMessage(null);
     setLoading(true);
 
-    if (isSignUp) {
+    if (isReset) {
+      // Password reset flow
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+      if (error) {
+        setError(error.message);
+      } else {
+        setMessage('Check your email for a password reset link');
+      }
+    } else if (isSignUp) {
       if (!username.trim()) {
         setError('Username is required');
         setLoading(false);
@@ -40,11 +53,19 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const switchMode = (newMode) => {
+    setMode(newMode);
+    setError(null);
+    setMessage(null);
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.card}>
         <h1 style={styles.logo}>HABITQUEST</h1>
-        <p style={styles.tagline}>Forge Your Discipline</p>
+        <p style={styles.tagline}>
+          {isReset ? 'Reset Your Password' : 'Forge Your Discipline'}
+        </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           {isSignUp && (
@@ -67,15 +88,17 @@ const Auth = () => {
             required
           />
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={styles.input}
-            minLength={6}
-            required
-          />
+          {!isReset && (
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={styles.input}
+              minLength={6}
+              required
+            />
+          )}
 
           {error && <p style={styles.error}>{error}</p>}
           {message && <p style={styles.message}>{message}</p>}
@@ -85,22 +108,47 @@ const Auth = () => {
             style={styles.button}
             disabled={loading}
           >
-            {loading ? 'Loading...' : isSignUp ? 'CREATE ACCOUNT' : 'SIGN IN'}
+            {loading
+              ? 'Loading...'
+              : isReset
+                ? 'SEND RESET LINK'
+                : isSignUp
+                  ? 'CREATE ACCOUNT'
+                  : 'SIGN IN'}
           </button>
         </form>
 
-        <button
-          style={styles.toggle}
-          onClick={() => {
-            setIsSignUp(!isSignUp);
-            setError(null);
-            setMessage(null);
-          }}
-        >
-          {isSignUp
-            ? 'Already have an account? Sign in'
-            : "Don't have an account? Sign up"}
-        </button>
+        {/* Forgot Password Link - only show on sign in */}
+        {!isSignUp && !isReset && (
+          <button
+            style={styles.forgotPassword}
+            onClick={() => switchMode('reset')}
+          >
+            Forgot password?
+          </button>
+        )}
+
+        {/* Back to Sign In - show on reset mode */}
+        {isReset && (
+          <button
+            style={styles.toggle}
+            onClick={() => switchMode('signin')}
+          >
+            Back to Sign In
+          </button>
+        )}
+
+        {/* Toggle between Sign In and Sign Up */}
+        {!isReset && (
+          <button
+            style={styles.toggle}
+            onClick={() => switchMode(isSignUp ? 'signin' : 'signup')}
+          >
+            {isSignUp
+              ? 'Already have an account? Sign in'
+              : "Don't have an account? Sign up"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -174,6 +222,17 @@ const styles = {
     marginTop: '24px',
     width: '100%',
     textAlign: 'center'
+  },
+  forgotPassword: {
+    background: 'none',
+    border: 'none',
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontSize: '0.8rem',
+    cursor: 'pointer',
+    marginTop: '12px',
+    width: '100%',
+    textAlign: 'center',
+    textDecoration: 'underline'
   },
   error: {
     color: '#ef4444',
