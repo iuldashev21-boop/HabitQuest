@@ -20,7 +20,8 @@ import {
   loadUserProfile,
   saveDailyLog,
   loadDailyLogs,
-  fullSync
+  fullSync,
+  deleteUserData
 } from '../lib/syncService';
 
 // Helper function to generate unique IDs
@@ -1131,6 +1132,16 @@ const useGameStore = create(
           perfectDaysCount: 0,
           totalXPEarned: 0
         });
+      },
+
+      // Delete all user data from Supabase
+      deleteFromSupabase: async () => {
+        const state = get();
+        if (state.userId) {
+          const result = await deleteUserData(state.userId);
+          return result;
+        }
+        return { success: true };
       }
     }),
     {

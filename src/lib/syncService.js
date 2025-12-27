@@ -247,3 +247,37 @@ export const saveAllData = async (userId, storeState) => {
     dailyLogs: { success: allLogsSuccess }
   };
 };
+
+/**
+ * Delete all user data from Supabase (for account reset)
+ * @param {string} userId - The authenticated user's ID
+ */
+export const deleteUserData = async (userId) => {
+  try {
+    // Delete daily logs first (foreign key constraint)
+    const { error: logsError } = await supabase
+      .from('daily_logs')
+      .delete()
+      .eq('user_id', userId);
+
+    if (logsError) {
+      console.error('Error deleting daily logs:', logsError);
+    }
+
+    // Delete profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (profileError) {
+      console.error('Error deleting profile:', profileError);
+      return { success: false, error: profileError };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Exception deleting user data:', err);
+    return { success: false, error: err };
+  }
+};

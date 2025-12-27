@@ -93,7 +93,8 @@ const Arsenal = () => {
     totalXPEarned = 0,
     getTotalRelapses,
     resetGame,
-    clearSyncState
+    clearSyncState,
+    deleteFromSupabase
   } = useGameStore();
 
   const handleSignOut = async (e) => {
@@ -179,17 +180,20 @@ const Arsenal = () => {
   };
 
   // Handle reset
-  const handleReset = (e) => {
+  const handleReset = async (e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
 
-    // IMPORTANT: Clear localStorage FIRST before any state changes
-    localStorage.clear();
-
-    // Then reset state
     try {
+      // Delete data from Supabase FIRST
+      await deleteFromSupabase();
+
+      // Clear localStorage
+      localStorage.clear();
+
+      // Reset local state
       resetGame();
       clearSyncState();
     } catch (err) {

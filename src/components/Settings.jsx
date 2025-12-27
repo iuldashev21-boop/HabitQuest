@@ -6,7 +6,7 @@ import { CLASSES } from '../data/gameData';
 import soundManager from '../utils/sounds';
 
 const Settings = ({ onClose }) => {
-  const { username, archetype, resetGame, clearSyncState, xp, level, currentStreak, longestStreak, currentDay } = useGameStore();
+  const { username, archetype, resetGame, clearSyncState, deleteFromSupabase, xp, level, currentStreak, longestStreak, currentDay } = useGameStore();
   const { signOut } = useAuth();
   const archetypeData = archetype ? CLASSES[archetype] : null;
 
@@ -19,18 +19,20 @@ const Settings = ({ onClose }) => {
     soundManager.setEnabled(newValue);
   };
 
-  const handleResetGame = (e) => {
+  const handleResetGame = async (e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
 
-    // IMPORTANT: Clear localStorage FIRST before any state changes
-    // This ensures Zustand won't rehydrate old data on reload
-    localStorage.clear(); // Clear ALL localStorage to be safe
-
-    // Then reset state (this will also trigger a save, but localStorage is already cleared)
     try {
+      // Delete data from Supabase FIRST
+      await deleteFromSupabase();
+
+      // Clear localStorage
+      localStorage.clear();
+
+      // Reset local state
       resetGame();
       clearSyncState();
     } catch (err) {
