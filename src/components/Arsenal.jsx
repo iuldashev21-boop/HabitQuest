@@ -97,8 +97,18 @@ const Arsenal = () => {
   } = useGameStore();
 
   const handleSignOut = async () => {
-    clearSyncState();
-    await signOut();
+    try {
+      clearSyncState();
+      const { error } = await signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+      }
+      // Force reload to clear all state
+      window.location.href = '/';
+    } catch (err) {
+      console.error('Sign out exception:', err);
+      window.location.href = '/';
+    }
   };
 
   const [habitsExpanded, setHabitsExpanded] = useState(false);
@@ -165,10 +175,19 @@ const Arsenal = () => {
   };
 
   // Handle reset
-  const handleReset = () => {
-    resetGame();
-    setShowResetConfirm(false);
-    setSettingsOpen(false);
+  const handleReset = async () => {
+    try {
+      // Clear local state
+      resetGame();
+      clearSyncState();
+      setShowResetConfirm(false);
+      setSettingsOpen(false);
+      // Force reload to restart fresh
+      window.location.href = '/';
+    } catch (err) {
+      console.error('Reset error:', err);
+      window.location.href = '/';
+    }
   };
 
   return (

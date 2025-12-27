@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { X, Trash2, Volume2, VolumeX, RotateCcw } from 'lucide-react';
+import { X, Trash2, Volume2, VolumeX, RotateCcw, LogOut } from 'lucide-react';
 import useGameStore from '../context/useGameStore';
+import { useAuth } from '../hooks/useAuth';
 import { CLASSES } from '../data/gameData';
 import soundManager from '../utils/sounds';
 
 const Settings = ({ onClose }) => {
-  const { username, archetype, resetGame, xp, level, currentStreak, longestStreak, currentDay } = useGameStore();
+  const { username, archetype, resetGame, clearSyncState, xp, level, currentStreak, longestStreak, currentDay } = useGameStore();
+  const { signOut } = useAuth();
   const archetypeData = archetype ? CLASSES[archetype] : null;
 
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -19,11 +21,23 @@ const Settings = ({ onClose }) => {
 
   const handleResetGame = () => {
     resetGame();
+    clearSyncState();
     // Clear localStorage
     localStorage.removeItem('habitquest-storage');
     onClose();
     // Force reload to reset all state
-    window.location.reload();
+    window.location.href = '/';
+  };
+
+  const handleSignOut = async () => {
+    try {
+      clearSyncState();
+      await signOut();
+      window.location.href = '/';
+    } catch (err) {
+      console.error('Sign out error:', err);
+      window.location.href = '/';
+    }
   };
 
   return (
@@ -106,6 +120,18 @@ const Settings = ({ onClose }) => {
                   ? (archetypeData?.colors.accent || '#22c55e')
                   : '#333333'
               }} />
+            </button>
+          </div>
+
+          {/* Sign Out */}
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}>Account</h3>
+            <button
+              style={styles.signOutButton}
+              onClick={handleSignOut}
+            >
+              <LogOut size={18} />
+              Sign Out
             </button>
           </div>
 
@@ -267,6 +293,18 @@ const styles = {
     width: '12px',
     height: '12px',
     borderRadius: '50%'
+  },
+  signOutButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    width: '100%',
+    padding: '14px 16px',
+    backgroundColor: '#1a1a1a',
+    border: '1px solid #444',
+    color: '#ffffff',
+    fontSize: '0.9375rem',
+    cursor: 'pointer'
   },
   resetButton: {
     display: 'flex',
