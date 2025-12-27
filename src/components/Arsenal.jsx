@@ -106,6 +106,7 @@ const Arsenal = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [soundEnabled, setSoundEnabledState] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const archetypeData = CLASSES[archetype];
 
@@ -380,7 +381,49 @@ const Arsenal = () => {
           <Settings size={18} />
           <span>Settings</span>
         </button>
+
+        {/* Sign Out Button - More Visible */}
+        <button
+          style={styles.signOutButtonVisible}
+          onClick={() => setShowSignOutConfirm(true)}
+        >
+          <LogOut size={18} />
+          <span>Sign Out</span>
+        </button>
       </section>
+
+      {/* Sign Out Confirmation Modal */}
+      {showSignOutConfirm && (
+        <div style={styles.modalOverlay} onClick={() => setShowSignOutConfirm(false)}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <button style={styles.modalClose} onClick={() => setShowSignOutConfirm(false)}>
+              <X size={20} />
+            </button>
+
+            <div style={styles.confirmBox}>
+              <LogOut size={32} color="#888" style={{ marginBottom: '16px' }} />
+              <h3 style={styles.confirmTitle}>Sign Out?</h3>
+              <p style={styles.confirmText}>
+                Your progress is saved. You can sign back in anytime to continue your journey.
+              </p>
+              <div style={styles.confirmButtons}>
+                <button
+                  style={styles.cancelButton}
+                  onClick={() => setShowSignOutConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  style={styles.confirmSignOutButton}
+                  onClick={handleSignOut}
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings Modal */}
       {settingsOpen && (
@@ -909,6 +952,32 @@ const styles = {
     padding: '10px 20px',
     backgroundColor: '#7f1d1d',
     border: 'none',
+    borderRadius: '6px',
+    color: '#fff',
+    fontSize: '0.875rem',
+    cursor: 'pointer'
+  },
+  signOutButtonVisible: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    width: '100%',
+    padding: '14px',
+    backgroundColor: 'transparent',
+    border: '1px solid #333',
+    borderRadius: '8px',
+    color: '#666',
+    cursor: 'pointer',
+    fontFamily: '"Bebas Neue", sans-serif',
+    fontSize: '1rem',
+    letterSpacing: '0.1em',
+    marginTop: '12px'
+  },
+  confirmSignOutButton: {
+    padding: '10px 20px',
+    backgroundColor: '#333',
+    border: '1px solid #444',
     borderRadius: '6px',
     color: '#fff',
     fontSize: '0.875rem',

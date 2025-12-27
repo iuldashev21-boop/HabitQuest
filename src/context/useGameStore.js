@@ -45,9 +45,13 @@ const getStartOfDay = (date = new Date()) => {
   return d.getTime();
 };
 
-// Helper function to get today's date string (YYYY-MM-DD)
+// Helper function to get today's date string (YYYY-MM-DD) in LOCAL time
 const getTodayString = () => {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 // Helper function to check if a date string is today
@@ -166,6 +170,9 @@ const useGameStore = create(
               lastSyncTime: Date.now()
             });
 
+            // Explicitly check for day reset after loading data
+            setTimeout(() => get().checkAndResetDay(), 0);
+
             return { success: true, hasData: true };
           } else if (result.profile.success && !result.profile.data) {
             // No data in Supabase - check if we have local data to sync up
@@ -254,6 +261,9 @@ const useGameStore = create(
         syncError: null,
         lastSyncTime: null
       }),
+
+      // Clear just the sync error
+      clearSyncError: () => set({ syncError: null }),
 
       // Set the commitment answers from onboarding
       setCommitmentAnswers: (answers) => set({ commitmentAnswers: answers }),
@@ -400,6 +410,65 @@ const useGameStore = create(
 
         // Sync to Supabase after completing habit
         setTimeout(() => get().syncToSupabase(), 100);
+      },
+
+      // Undo a habit completion - only allowed if day not yet submitted
+      uncompleteHabit: (habitId) => {
+        const state = get();
+
+        // Don't allow undo if day is already submitted
+        if (state.isTodaySubmitted && state.isTodaySubmitted()) {
+          return { success: false, reason: 'Day already submitted' };
+        }
+
+        // Check if day is locked
+        if (state.dayLockedAt !== null) {
+          return { success: false, reason: 'Day is locked' };
+        }
+
+        const habitIndex = state.habits.findIndex((h) => h.id === habitId);
+        if (habitIndex === -1) return { success: false, reason: 'Habit not found' };
+
+        const habit = state.habits[habitIndex];
+        if (!habit.completed) return { success: false, reason: 'Habit not completed' };
+
+        // Remove today from completedDates
+        const todayStr = getTodayString();
+        const newCompletedDates = (habit.completedDates || []).filter(d => d !== todayStr);
+
+        // Calculate XP to remove (reverse of completeHabit)
+        const streakMultiplier = getStreakMultiplier(state.currentStreak);
+        const xpToRemove = Math.floor(habit.xp * streakMultiplier);
+
+        // Revert streak for daily habits
+        let newStreak = habit.streak;
+        if (habit.frequency === 'daily' && habit.streak > 0) {
+          newStreak = habit.streak - 1;
+        }
+
+        // Update the habit
+        const updatedHabits = [...state.habits];
+        updatedHabits[habitIndex] = {
+          ...habit,
+          completed: false,
+          completedDates: newCompletedDates,
+          streak: newStreak
+        };
+
+        // Calculate new XP (ensure it doesn't go negative)
+        const newXp = Math.max(0, state.xp - xpToRemove);
+        const newLevel = Math.floor(newXp / XP_PER_LEVEL) + 1;
+
+        set({
+          habits: updatedHabits,
+          xp: newXp,
+          level: newLevel
+        });
+
+        // Sync to Supabase
+        setTimeout(() => get().syncToSupabase(), 100);
+
+        return { success: true, xpRemoved: xpToRemove };
       },
 
       // Relapse on a demon habit - resets habit streak only, loses 50% of XP earned from this habit

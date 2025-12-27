@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { Flame, Skull, Zap, Check, X, ChevronDown, ChevronRight, Settings as SettingsIcon, Clock, Calendar } from 'lucide-react';
+import { Flame, Skull, Zap, Check, X, ChevronDown, ChevronRight, Settings as SettingsIcon, Clock, Calendar, WifiOff, RefreshCw } from 'lucide-react';
 import useGameStore from '../context/useGameStore';
 import { CLASSES, XP_PER_LEVEL, FREQUENCY_TYPES, isScheduledDay, getWeekCompletions } from '../data/gameData';
 import XPPopup from './XPPopup';
@@ -8,6 +8,74 @@ import DayCompleteModal from './DayCompleteModal';
 import Settings from './Settings';
 import SideQuests from './SideQuests';
 import { playSuccess, playRelapse, playComplete } from '../utils/sounds';
+
+// Sync Status Toast Component
+const SyncToast = ({ error, isSyncing, onDismiss }) => {
+  if (!error && !isSyncing) return null;
+
+  // Determine if it's a config error vs network error
+  const isConfigError = error && (
+    error.includes('Invalid API key') ||
+    error.includes('JWT') ||
+    error.includes('invalid_api_key') ||
+    error.includes('401')
+  );
+
+  const errorMessage = isConfigError
+    ? 'Config error - check console'
+    : 'Sync failed - saved locally';
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: '16px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      backgroundColor: error ? '#7f1d1d' : '#1a1a1a',
+      border: `1px solid ${error ? '#dc2626' : '#333'}`,
+      borderRadius: '8px',
+      padding: '12px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      zIndex: 1001,
+      maxWidth: '90%',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
+    }}>
+      {error ? (
+        <>
+          <WifiOff size={16} color="#ef4444" />
+          <span style={{ fontSize: '0.8125rem', color: '#fca5a5' }}>
+            {errorMessage}
+          </span>
+          <button
+            onClick={onDismiss}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#666',
+              cursor: 'pointer',
+              padding: '4px'
+            }}
+          >
+            <X size={14} />
+          </button>
+        </>
+      ) : (
+        <>
+          <RefreshCw size={14} color="#888" style={{ animation: 'spin 1s linear infinite' }} />
+          <span style={{ fontSize: '0.8125rem', color: '#888' }}>Syncing...</span>
+        </>
+      )}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 const Dashboard = () => {
   const {
@@ -18,6 +86,7 @@ const Dashboard = () => {
     currentStreak,
     currentDay,
     completeHabit,
+    uncompleteHabit,
     relapseHabit,
     markDayCompleted,
     markCelebrationShown,
@@ -28,7 +97,10 @@ const Dashboard = () => {
     getTimeUntilUnlock,
     refreshSideQuests,
     isTodaySubmitted,
-    wasCelebrationShownToday
+    wasCelebrationShownToday,
+    syncError,
+    isSyncing,
+    clearSyncError
   } = useGameStore();
 
   const [xpPopups, setXpPopups] = useState([]);
@@ -147,6 +219,19 @@ const Dashboard = () => {
       });
     }, 500);
   }, [habits, completeHabit, addXPPopup]);
+
+  // Handle undo habit completion (before submission)
+  const handleUncompleteHabit = useCallback((habitId) => {
+    const habit = habits.find((h) => h.id === habitId);
+    if (!habit || !habit.completed) return;
+    if (daySubmitted) return; // Can't undo after submission
+
+    const result = uncompleteHabit(habitId);
+    if (result && result.success) {
+      // Show negative XP popup
+      addXPPopup(habitId, -result.xpRemoved);
+    }
+  }, [habits, uncompleteHabit, daySubmitted, addXPPopup]);
 
   const handleRelapseClick = useCallback((habit) => {
     setRelapseModalHabit(habit);
@@ -296,13 +381,19 @@ const Dashboard = () => {
                 <Calendar size={16} color="#444" />
               </div>
             ) : habit.completed ? (
-              <div style={{
-                ...styles.completedBadge,
-                backgroundColor: isDemon ? 'rgba(127, 29, 29, 0.5)' : 'rgba(20, 83, 45, 0.5)',
-                color: isDemon ? '#fca5a5' : '#86efac'
-              }}>
+              <button
+                style={{
+                  ...styles.completedBadge,
+                  backgroundColor: isDemon ? 'rgba(127, 29, 29, 0.5)' : 'rgba(20, 83, 45, 0.5)',
+                  color: isDemon ? '#fca5a5' : '#86efac',
+                  cursor: 'pointer',
+                  border: 'none'
+                }}
+                onClick={() => handleUncompleteHabit(habit.id)}
+                title="Click to undo"
+              >
                 <Check size={14} />
-              </div>
+              </button>
             ) : habit.relapsedToday ? (
               // Relapsed demon - show X badge
               <div style={styles.relapsedBadge}>
@@ -341,6 +432,7 @@ const Dashboard = () => {
   if (daySubmitted) {
     return (
       <div style={styles.container}>
+        <SyncToast error={syncError} isSyncing={isSyncing} onDismiss={clearSyncError} />
         <div style={styles.content}>
           {/* Minimal Header */}
           <header style={styles.headerCompact}>
@@ -394,6 +486,9 @@ const Dashboard = () => {
                 Come back in {formatCountdown(timeUntilUnlock)}
               </span>
             </div>
+            <p style={styles.midnightResetText}>
+              Your habits will reset at midnight
+            </p>
           </div>
 
           {/* Side Quests still available */}
@@ -408,6 +503,7 @@ const Dashboard = () => {
   // Main Dashboard (not submitted)
   return (
     <div style={styles.container}>
+      <SyncToast error={syncError} isSyncing={isSyncing} onDismiss={clearSyncError} />
       <div style={styles.content}>
         {/* Compact Header */}
         <header style={styles.header}>
@@ -1058,6 +1154,13 @@ const styles = {
   countdownText: {
     fontSize: '0.75rem',
     color: '#555'
+  },
+  midnightResetText: {
+    fontSize: '0.6875rem',
+    color: '#444',
+    textAlign: 'center',
+    marginTop: '8px',
+    fontStyle: 'italic'
   }
 };
 

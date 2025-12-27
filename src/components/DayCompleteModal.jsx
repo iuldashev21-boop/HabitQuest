@@ -30,8 +30,11 @@ const DayCompleteModal = ({
     // Play sound
     playLevelUp();
 
-    // Fire confetti for perfect day or milestone
-    if (isPerfectDay || isMilestone) {
+    // Fire confetti ONLY for perfect day, or milestone WITHOUT relapses
+    // Don't celebrate relapses with confetti
+    const shouldFireConfetti = isPerfectDay || (isMilestone && !hasRelapse);
+
+    if (shouldFireConfetti) {
       const colors = isMilestone
         ? ['#fbbf24', '#f97316', '#ffffff']
         : [archetypeData.colors.accent, '#fbbf24', '#ffffff'];

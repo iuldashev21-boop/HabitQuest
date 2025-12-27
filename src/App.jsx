@@ -16,23 +16,36 @@ import Navigation from './components/Navigation';
 import './App.css';
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthenticated, initialized } = useAuth();
 
-  // Show loading screen while checking auth
-  if (loading) {
+  // DEBUG: Log auth state to console
+  console.log('[Auth Debug]', {
+    user: user?.id || null,
+    loading,
+    isAuthenticated,
+    initialized
+  });
+
+  // CRITICAL: Always show loading screen until auth is fully initialized
+  // This prevents any flash of content before auth check completes
+  if (loading || !initialized) {
     return (
       <div style={styles.loadingContainer}>
         <h1 style={styles.loadingText}>HABITQUEST</h1>
+        <p style={styles.syncingText}>Checking authentication...</p>
       </div>
     );
   }
 
-  // Show auth screen if not logged in
-  if (!user) {
+  // CRITICAL: Require authentication to access the app
+  // If not authenticated, show ONLY the Auth component
+  if (!isAuthenticated || !user) {
+    console.log('[Auth] Not authenticated, showing login screen');
     return <Auth />;
   }
 
-  // User is logged in, show main app with user ID
+  console.log('[Auth] User authenticated:', user.id);
+  // User is verified as logged in, show main app with user ID
   return <MainApp userId={user.id} />;
 }
 
