@@ -26,22 +26,27 @@ const SyncToast = ({ error, isSyncing, onDismiss }) => {
     : 'Sync failed - saved locally';
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: '16px',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      backgroundColor: error ? '#7f1d1d' : '#1a1a1a',
-      border: `1px solid ${error ? '#dc2626' : '#333'}`,
-      borderRadius: '8px',
-      padding: '12px 16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      zIndex: 1001,
-      maxWidth: '90%',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
-    }}>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      style={{
+        position: 'fixed',
+        top: '16px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        backgroundColor: error ? '#7f1d1d' : '#1a1a1a',
+        border: `1px solid ${error ? '#dc2626' : '#333'}`,
+        borderRadius: '8px',
+        padding: '12px 16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        zIndex: 1001,
+        maxWidth: '90%',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
+      }}
+    >
       {error ? (
         <>
           <WifiOff size={16} color="#ef4444" />
@@ -1157,7 +1162,7 @@ const styles = {
   },
   midnightResetText: {
     fontSize: '0.6875rem',
-    color: '#444',
+    color: '#888',
     textAlign: 'center',
     marginTop: '8px',
     fontStyle: 'italic'

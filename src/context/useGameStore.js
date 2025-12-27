@@ -432,13 +432,25 @@ const useGameStore = create(
         const habit = state.habits[habitIndex];
         if (!habit.completed) return { success: false, reason: 'Habit not completed' };
 
+        // Check if we currently have a perfect day (before uncompleting)
+        const wasAllCompleted = state.habits.every((h) => {
+          const isScheduled = isScheduledDay(h.frequency || 'daily');
+          return !isScheduled || h.completed;
+        });
+
         // Remove today from completedDates
         const todayStr = getTodayString();
         const newCompletedDates = (habit.completedDates || []).filter(d => d !== todayStr);
 
         // Calculate XP to remove (reverse of completeHabit)
         const streakMultiplier = getStreakMultiplier(state.currentStreak);
-        const xpToRemove = Math.floor(habit.xp * streakMultiplier);
+        let xpToRemove = Math.floor(habit.xp * streakMultiplier);
+
+        // If we were at a perfect day, also revert the perfect day bonus
+        if (wasAllCompleted) {
+          const perfectBonus = Math.floor(PERFECT_DAY_BONUS * streakMultiplier);
+          xpToRemove += perfectBonus;
+        }
 
         // Revert streak for daily habits
         let newStreak = habit.streak;

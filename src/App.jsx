@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useGameStore from './context/useGameStore';
 import { useAuth } from './hooks/useAuth';
 import Auth from './components/Auth';
+import ResetPassword from './components/ResetPassword';
 import Welcome from './components/Welcome';
 import ProfileSetup from './components/ProfileSetup';
 import CommitmentQuestions from './components/CommitmentQuestions';
@@ -18,13 +19,33 @@ import './App.css';
 function App() {
   const { user, loading, isAuthenticated, initialized } = useAuth();
 
-  // DEBUG: Log auth state to console
-  console.log('[Auth Debug]', {
-    user: user?.id || null,
-    loading,
-    isAuthenticated,
-    initialized
-  });
+  // Check if this is a password reset callback
+  // Supabase uses hash fragments for recovery tokens: #access_token=...&type=recovery
+  const isPasswordResetCallback = window.location.hash.includes('type=recovery') ||
+    window.location.pathname === '/reset-password';
+
+  // DEBUG: Log auth state to console (only in development)
+  if (import.meta.env.DEV) {
+    console.log('[Auth Debug]', {
+      user: user?.id || null,
+      loading,
+      isAuthenticated,
+      initialized,
+      isPasswordResetCallback
+    });
+  }
+
+  // Handle password reset callback
+  if (isPasswordResetCallback) {
+    return (
+      <ResetPassword
+        onComplete={() => {
+          // Clear the hash and redirect to home
+          window.location.href = '/';
+        }}
+      />
+    );
+  }
 
   // CRITICAL: Always show loading screen until auth is fully initialized
   // This prevents any flash of content before auth check completes
@@ -40,11 +61,15 @@ function App() {
   // CRITICAL: Require authentication to access the app
   // If not authenticated, show ONLY the Auth component
   if (!isAuthenticated || !user) {
-    console.log('[Auth] Not authenticated, showing login screen');
+    if (import.meta.env.DEV) {
+      console.log('[Auth] Not authenticated, showing login screen');
+    }
     return <Auth />;
   }
 
-  console.log('[Auth] User authenticated:', user.id);
+  if (import.meta.env.DEV) {
+    console.log('[Auth] User authenticated:', user.id);
+  }
   // User is verified as logged in, show main app with user ID
   return <MainApp userId={user.id} />;
 }
