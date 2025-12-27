@@ -32,13 +32,14 @@ function App() {
     return <Auth />;
   }
 
-  // User is logged in, show main app
-  return <MainApp />;
+  // User is logged in, show main app with user ID
+  return <MainApp userId={user.id} />;
 }
 
 // Main app component (shown after login)
-function MainApp() {
+function MainApp({ userId }) {
   const [activeTab, setActiveTab] = useState('command');
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   const {
     username,
@@ -52,10 +53,24 @@ function MainApp() {
     setArchetype,
     setDifficulty,
     initializeHabits,
-    resetGame
+    resetGame,
+    loadFromSupabase,
+    isSyncing
   } = useGameStore();
 
   const [showWelcome, setShowWelcome] = useState(!username);
+
+  // Load data from Supabase on mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (userId) {
+        setIsLoadingData(true);
+        await loadFromSupabase(userId);
+        setIsLoadingData(false);
+      }
+    };
+    loadData();
+  }, [userId, loadFromSupabase]);
 
   // Update welcome state when username changes
   useEffect(() => {
@@ -63,6 +78,16 @@ function MainApp() {
       setShowWelcome(false);
     }
   }, [username]);
+
+  // Show loading screen while syncing from Supabase
+  if (isLoadingData) {
+    return (
+      <div style={styles.loadingContainer}>
+        <h1 style={styles.loadingText}>HABITQUEST</h1>
+        <p style={styles.syncingText}>Syncing data...</p>
+      </div>
+    );
+  }
 
   // ========== ONBOARDING HANDLERS ==========
 
@@ -221,6 +246,7 @@ const styles = {
     minHeight: '100vh',
     backgroundColor: '#000000',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -230,6 +256,11 @@ const styles = {
     color: '#ffffff',
     letterSpacing: '0.2em',
     opacity: 0.5
+  },
+  syncingText: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: '0.9rem',
+    marginTop: '8px'
   }
 };
 

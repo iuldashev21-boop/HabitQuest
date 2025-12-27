@@ -15,6 +15,13 @@ import {
   isScheduledDay,
   isWeekSuccessful
 } from '../data/gameData';
+import {
+  saveUserProfile,
+  loadUserProfile,
+  saveDailyLog,
+  loadDailyLogs,
+  fullSync
+} from '../lib/syncService';
 
 // Helper function to generate unique IDs
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -124,10 +131,129 @@ const useGameStore = create(
       perfectDaysCount: 0,
       totalXPEarned: 0,
 
+      // Sync state
+      isSyncing: false,
+      syncError: null,
+      lastSyncTime: null,
+      userId: null, // Set when user logs in
+
       // ========== ACTIONS ==========
 
       // Set the user's display name
       setUsername: (username) => set({ username }),
+
+      // ========== SYNC ACTIONS ==========
+
+      // Set the user ID (called on login)
+      setUserId: (userId) => set({ userId }),
+
+      // Load data from Supabase on login
+      loadFromSupabase: async (userId) => {
+        set({ isSyncing: true, syncError: null, userId });
+
+        try {
+          const result = await fullSync(userId);
+
+          if (result.profile.success && result.profile.data) {
+            // Supabase has data - use it
+            const profileData = result.profile.data;
+            const dailyLogs = result.dailyLogs.success ? result.dailyLogs.data : [];
+
+            set({
+              ...profileData,
+              dayHistory: dailyLogs,
+              isSyncing: false,
+              lastSyncTime: Date.now()
+            });
+
+            return { success: true, hasData: true };
+          } else if (result.profile.success && !result.profile.data) {
+            // No data in Supabase - check if we have local data to sync up
+            const state = get();
+            if (state.habits && state.habits.length > 0) {
+              // We have local data - sync it to Supabase
+              await get().syncToSupabase();
+            }
+            set({ isSyncing: false, lastSyncTime: Date.now() });
+            return { success: true, hasData: false };
+          } else {
+            // Error loading
+            set({ isSyncing: false, syncError: 'Failed to load data' });
+            return { success: false, error: result.profile.error };
+          }
+        } catch (err) {
+          set({ isSyncing: false, syncError: err.message });
+          return { success: false, error: err };
+        }
+      },
+
+      // Sync current state to Supabase
+      syncToSupabase: async () => {
+        const state = get();
+        if (!state.userId) return { success: false, error: 'No user ID' };
+
+        set({ isSyncing: true, syncError: null });
+
+        try {
+          // Save profile
+          const profileResult = await saveUserProfile(state.userId, {
+            username: state.username,
+            archetype: state.archetype,
+            difficulty: state.difficulty,
+            xp: state.xp,
+            level: state.level,
+            currentStreak: state.currentStreak,
+            longestStreak: state.longestStreak,
+            dayStarted: state.dayStarted,
+            currentDay: state.currentDay,
+            habits: state.habits,
+            achievements: state.achievements,
+            totalDaysCompleted: state.totalDaysCompleted,
+            perfectDaysCount: state.perfectDaysCount,
+            totalXPEarned: state.totalXPEarned,
+            commitmentAnswers: state.commitmentAnswers,
+            lastCompletedDate: state.lastCompletedDate,
+            dayLockedAt: state.dayLockedAt,
+            lastSubmitDate: state.lastSubmitDate,
+            lastCelebrationDate: state.lastCelebrationDate,
+            dailySideQuests: state.dailySideQuests,
+            completedSideQuests: state.completedSideQuests,
+            sideQuestsDate: state.sideQuestsDate
+          });
+
+          if (!profileResult.success) {
+            set({ isSyncing: false, syncError: 'Failed to save profile' });
+            return profileResult;
+          }
+
+          set({ isSyncing: false, lastSyncTime: Date.now() });
+          return { success: true };
+        } catch (err) {
+          set({ isSyncing: false, syncError: err.message });
+          return { success: false, error: err };
+        }
+      },
+
+      // Sync a daily log entry
+      syncDailyLog: async (logEntry) => {
+        const state = get();
+        if (!state.userId) return { success: false, error: 'No user ID' };
+
+        try {
+          return await saveDailyLog(state.userId, logEntry.date, logEntry);
+        } catch (err) {
+          console.error('Failed to sync daily log:', err);
+          return { success: false, error: err };
+        }
+      },
+
+      // Clear sync state on logout
+      clearSyncState: () => set({
+        userId: null,
+        isSyncing: false,
+        syncError: null,
+        lastSyncTime: null
+      }),
 
       // Set the commitment answers from onboarding
       setCommitmentAnswers: (answers) => set({ commitmentAnswers: answers }),
@@ -168,6 +294,9 @@ const useGameStore = create(
           lastCompletedDate: null,
           onboardingComplete: true
         });
+
+        // Sync to Supabase after onboarding
+        setTimeout(() => get().syncToSupabase(), 100);
       },
 
       // Add a single habit
@@ -268,6 +397,9 @@ const useGameStore = create(
             level: finalLevel
           });
         }
+
+        // Sync to Supabase after completing habit
+        setTimeout(() => get().syncToSupabase(), 100);
       },
 
       // Relapse on a demon habit - resets habit streak only, loses 50% of XP earned from this habit
@@ -315,6 +447,9 @@ const useGameStore = create(
           level: newLevel
           // Note: currentStreak, dayStarted, currentDay are NOT modified
         });
+
+        // Sync to Supabase after relapse
+        setTimeout(() => get().syncToSupabase(), 100);
 
         // Return info for UI feedback
         return {
@@ -499,6 +634,12 @@ const useGameStore = create(
             achievements: newAchievements
           });
 
+          // Sync to Supabase after day submission
+          setTimeout(() => {
+            get().syncToSupabase();
+            get().syncDailyLog(historyEntry);
+          }, 100);
+
           return {
             streakUpdated: true,
             newStreak: newCurrentStreak,
@@ -591,6 +732,9 @@ const useGameStore = create(
           xp: newXp,
           level: newLevel
         });
+
+        // Sync to Supabase after completing side quest
+        setTimeout(() => get().syncToSupabase(), 100);
 
         return { xpEarned: earnedXp, quest };
       },

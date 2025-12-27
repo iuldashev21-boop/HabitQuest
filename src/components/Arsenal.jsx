@@ -92,8 +92,14 @@ const Arsenal = () => {
     perfectDaysCount = 0,
     totalXPEarned = 0,
     getTotalRelapses,
-    resetGame
+    resetGame,
+    clearSyncState
   } = useGameStore();
+
+  const handleSignOut = async () => {
+    clearSyncState();
+    await signOut();
+  };
 
   const [habitsExpanded, setHabitsExpanded] = useState(false);
   const [achievementsExpanded, setAchievementsExpanded] = useState(false);
@@ -434,7 +440,7 @@ const Arsenal = () => {
               </div>
               <button
                 style={styles.signOutButton}
-                onClick={signOut}
+                onClick={handleSignOut}
               >
                 Sign Out
               </button>
