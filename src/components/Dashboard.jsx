@@ -26,25 +26,30 @@ const SyncToast = ({ error, isSyncing, onDismiss }) => {
     : 'Sync failed - saved locally';
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: '16px',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      backgroundColor: error ? '#7f1d1d' : '#1a1a1a',
-      border: `1px solid ${error ? '#dc2626' : '#333'}`,
-      borderRadius: '8px',
-      padding: '12px 16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      zIndex: 1001,
-      maxWidth: '90%',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
-    }}>
+    <div
+      style={{
+        position: 'fixed',
+        top: '16px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        backgroundColor: error ? '#7f1d1d' : '#1a1a1a',
+        border: `1px solid ${error ? '#dc2626' : '#333'}`,
+        borderRadius: '8px',
+        padding: '12px 16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        zIndex: 1001,
+        maxWidth: '90%',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
+      }}
+      role={error ? 'alert' : 'status'}
+      aria-live={error ? 'assertive' : 'polite'}
+      aria-atomic="true"
+    >
       {error ? (
         <>
-          <WifiOff size={16} color="#ef4444" />
+          <WifiOff size={16} color="#ef4444" aria-hidden="true" />
           <span style={{ fontSize: '0.8125rem', color: '#fca5a5' }}>
             {errorMessage}
           </span>
@@ -57,13 +62,14 @@ const SyncToast = ({ error, isSyncing, onDismiss }) => {
               cursor: 'pointer',
               padding: '4px'
             }}
+            aria-label="Dismiss sync notification"
           >
-            <X size={14} />
+            <X size={14} aria-hidden="true" />
           </button>
         </>
       ) : (
         <>
-          <RefreshCw size={14} color="#888" style={{ animation: 'spin 1s linear infinite' }} />
+          <RefreshCw size={14} color="#888" style={{ animation: 'spin 1s linear infinite' }} aria-hidden="true" />
           <span style={{ fontSize: '0.8125rem', color: '#888' }}>Syncing...</span>
         </>
       )}
@@ -1157,7 +1163,7 @@ const styles = {
   },
   midnightResetText: {
     fontSize: '0.6875rem',
-    color: '#444',
+    color: '#888',  // Changed from #444 for WCAG AA contrast compliance (4.5:1)
     textAlign: 'center',
     marginTop: '8px',
     fontStyle: 'italic'

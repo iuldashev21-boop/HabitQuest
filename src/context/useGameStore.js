@@ -432,13 +432,23 @@ const useGameStore = create(
         const habit = state.habits[habitIndex];
         if (!habit.completed) return { success: false, reason: 'Habit not completed' };
 
+        // Check if we had a perfect day BEFORE uncompleting (all scheduled habits completed)
+        const scheduledHabits = state.habits.filter((h) => isScheduledDay(h.frequency || 'daily'));
+        const wasPerfectDay = scheduledHabits.every((h) => h.completed);
+
         // Remove today from completedDates
         const todayStr = getTodayString();
         const newCompletedDates = (habit.completedDates || []).filter(d => d !== todayStr);
 
         // Calculate XP to remove (reverse of completeHabit)
         const streakMultiplier = getStreakMultiplier(state.currentStreak);
-        const xpToRemove = Math.floor(habit.xp * streakMultiplier);
+        let xpToRemove = Math.floor(habit.xp * streakMultiplier);
+
+        // If we're breaking a perfect day, also remove the perfect day bonus
+        if (wasPerfectDay) {
+          const perfectDayXp = Math.floor(PERFECT_DAY_BONUS * streakMultiplier);
+          xpToRemove += perfectDayXp;
+        }
 
         // Revert streak for daily habits
         let newStreak = habit.streak;
@@ -468,7 +478,7 @@ const useGameStore = create(
         // Sync to Supabase
         setTimeout(() => get().syncToSupabase(), 100);
 
-        return { success: true, xpRemoved: xpToRemove };
+        return { success: true, xpRemoved: xpToRemove, brokePerectDay: wasPerfectDay };
       },
 
       // Relapse on a demon habit - resets habit streak only, loses 50% of XP earned from this habit

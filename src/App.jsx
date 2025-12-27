@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useGameStore from './context/useGameStore';
 import { useAuth } from './hooks/useAuth';
 import Auth from './components/Auth';
+import ResetPassword from './components/ResetPassword';
 import Welcome from './components/Welcome';
 import ProfileSetup from './components/ProfileSetup';
 import CommitmentQuestions from './components/CommitmentQuestions';
@@ -17,14 +18,30 @@ import './App.css';
 
 function App() {
   const { user, loading, isAuthenticated, initialized } = useAuth();
+  const [isResetPasswordRoute, setIsResetPasswordRoute] = useState(false);
 
-  // DEBUG: Log auth state to console
-  console.log('[Auth Debug]', {
-    user: user?.id || null,
-    loading,
-    isAuthenticated,
-    initialized
-  });
+  // Check if we're on the reset-password route
+  useEffect(() => {
+    const checkRoute = () => {
+      const isReset = window.location.pathname === '/reset-password' ||
+                      window.location.hash.includes('type=recovery');
+      setIsResetPasswordRoute(isReset);
+    };
+    checkRoute();
+    window.addEventListener('hashchange', checkRoute);
+    return () => window.removeEventListener('hashchange', checkRoute);
+  }, []);
+
+  // DEBUG: Log auth state to console (only in development)
+  if (import.meta.env.DEV) {
+    console.log('[Auth Debug]', {
+      user: user?.id || null,
+      loading,
+      isAuthenticated,
+      initialized,
+      isResetPasswordRoute
+    });
+  }
 
   // CRITICAL: Always show loading screen until auth is fully initialized
   // This prevents any flash of content before auth check completes
@@ -37,14 +54,30 @@ function App() {
     );
   }
 
+  // Handle password reset route (user clicked email link)
+  if (isResetPasswordRoute) {
+    return (
+      <ResetPassword
+        onComplete={() => {
+          setIsResetPasswordRoute(false);
+          window.history.pushState({}, '', '/');
+        }}
+      />
+    );
+  }
+
   // CRITICAL: Require authentication to access the app
   // If not authenticated, show ONLY the Auth component
   if (!isAuthenticated || !user) {
-    console.log('[Auth] Not authenticated, showing login screen');
+    if (import.meta.env.DEV) {
+      console.log('[Auth] Not authenticated, showing login screen');
+    }
     return <Auth />;
   }
 
-  console.log('[Auth] User authenticated:', user.id);
+  if (import.meta.env.DEV) {
+    console.log('[Auth] User authenticated:', user.id);
+  }
   // User is verified as logged in, show main app with user ID
   return <MainApp userId={user.id} />;
 }
