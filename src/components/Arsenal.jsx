@@ -185,21 +185,24 @@ const Arsenal = () => {
       e.stopPropagation();
     }
 
-    // Clear all state
-    resetGame();
-    clearSyncState();
+    // IMPORTANT: Clear localStorage FIRST before any state changes
+    localStorage.clear();
 
-    // Clear all localStorage
-    localStorage.removeItem('habitquest-storage');
-    localStorage.removeItem('habitquest-remember-me');
+    // Then reset state
+    try {
+      resetGame();
+      clearSyncState();
+    } catch (err) {
+      console.error('Reset error:', err);
+    }
 
     setShowResetConfirm(false);
     setSettingsOpen(false);
 
-    // Force reload
+    // Force full page reload
     setTimeout(() => {
       window.location.replace('/');
-    }, 100);
+    }, 50);
   };
 
   return (

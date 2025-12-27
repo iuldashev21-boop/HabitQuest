@@ -20,22 +20,30 @@ const Settings = ({ onClose }) => {
   };
 
   const handleResetGame = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
-    // Clear all state
-    resetGame();
-    clearSyncState();
+    // IMPORTANT: Clear localStorage FIRST before any state changes
+    // This ensures Zustand won't rehydrate old data on reload
+    localStorage.clear(); // Clear ALL localStorage to be safe
 
-    // Clear all localStorage
-    localStorage.removeItem('habitquest-storage');
-    localStorage.removeItem('habitquest-remember-me');
+    // Then reset state (this will also trigger a save, but localStorage is already cleared)
+    try {
+      resetGame();
+      clearSyncState();
+    } catch (err) {
+      console.error('Reset error:', err);
+    }
 
-    // Close modal and reload
+    // Close modal
     onClose();
+
+    // Force full page reload to reinitialize everything
     setTimeout(() => {
       window.location.replace('/');
-    }, 100);
+    }, 50);
   };
 
   const handleSignOut = async (e) => {
