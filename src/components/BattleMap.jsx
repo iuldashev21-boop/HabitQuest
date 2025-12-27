@@ -2,20 +2,16 @@ import { useState, useMemo } from 'react';
 import { Calendar, Flame, Trophy, Target, Star, X, Check, AlertTriangle } from 'lucide-react';
 import useGameStore from '../context/useGameStore';
 import { CLASSES, PHASES, getPhase } from '../data/gameData';
+import { formatDateYMD, parseLocalDate } from '../lib/dates';
 
-// Helper to format date
-const formatDate = (dateStr) => {
-  const date = new Date(dateStr);
+// Helper to format date for display
+const formatDateDisplay = (dateStr) => {
+  const date = parseLocalDate(dateStr) || new Date(dateStr);
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric'
   });
-};
-
-// Helper to get date string
-const getDateString = (date) => {
-  return date.toISOString().split('T')[0];
 };
 
 // Helper to get start of journey date
@@ -61,14 +57,14 @@ const BattleMap = () => {
     const startDate = getJourneyStartDate(dayStarted);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = getDateString(today);
+    const todayStr = formatDateYMD(today);
 
     const days = [];
     for (let i = 0; i < 66; i++) {
       const dayDate = new Date(startDate);
       dayDate.setDate(startDate.getDate() + i);
       dayDate.setHours(0, 0, 0, 0);
-      const dateStr = getDateString(dayDate);
+      const dateStr = formatDateYMD(dayDate);
       const dayNum = i + 1;
 
       // Find history for this day
@@ -357,7 +353,7 @@ const BattleMap = () => {
               <h3 style={{ ...styles.modalTitle, color: archetypeData.colors.accent }}>
                 DAY {selectedDay.dayNum}
               </h3>
-              <p style={styles.modalDate}>{formatDate(selectedDay.date)}</p>
+              <p style={styles.modalDate}>{formatDateDisplay(selectedDay.date)}</p>
 
               {selectedDay.history?.isPerfect && (
                 <div style={styles.perfectBadge}>

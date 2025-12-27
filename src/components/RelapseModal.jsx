@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AlertTriangle, Heart, Flame, Trophy } from 'lucide-react';
 import { CLASSES } from '../data/gameData';
 
@@ -16,6 +16,39 @@ const RelapseModal = ({ habit, archetype, onConfirm, onCancel }) => {
   const [showRecovery, setShowRecovery] = useState(false);
   const [relapseResult, setRelapseResult] = useState(null);
   const archetypeData = CLASSES[archetype];
+
+  // Inject styles on mount (moved from module scope for SSR compatibility)
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const existingStyle = document.getElementById('relapse-modal-styles');
+    if (existingStyle) return;
+
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'relapse-modal-styles';
+    styleSheet.textContent = `
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+      }
+      @keyframes flashRed {
+        0% { background-color: #1A1A1A; }
+        25% { background-color: rgba(220, 38, 38, 0.3); }
+        50% { background-color: rgba(220, 38, 38, 0.5); }
+        75% { background-color: rgba(220, 38, 38, 0.3); }
+        100% { background-color: #1A1A1A; }
+      }
+    `;
+    document.head.appendChild(styleSheet);
+
+    // Cleanup on unmount
+    return () => {
+      const style = document.getElementById('relapse-modal-styles');
+      if (style) {
+        style.remove();
+      }
+    };
+  }, []);
 
   // Pick a random message
   const message = useMemo(() => {
@@ -391,43 +424,5 @@ const styles = {
     cursor: 'pointer'
   }
 };
-
-// Add pulse animation for heart
-if (typeof document !== 'undefined') {
-  const existingStyle = document.getElementById('relapse-modal-styles');
-  if (!existingStyle) {
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'relapse-modal-styles';
-    styleSheet.textContent = `
-      @keyframes pulse {
-        0%, 100% {
-          transform: scale(1);
-        }
-        50% {
-          transform: scale(1.1);
-        }
-      }
-
-      @keyframes flashRed {
-        0% {
-          background-color: #1A1A1A;
-        }
-        25% {
-          background-color: rgba(220, 38, 38, 0.3);
-        }
-        50% {
-          background-color: rgba(220, 38, 38, 0.5);
-        }
-        75% {
-          background-color: rgba(220, 38, 38, 0.3);
-        }
-        100% {
-          background-color: #1A1A1A;
-        }
-      }
-    `;
-    document.head.appendChild(styleSheet);
-  }
-}
 
 export default RelapseModal;

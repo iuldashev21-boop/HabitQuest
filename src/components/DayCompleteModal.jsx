@@ -30,9 +30,13 @@ const DayCompleteModal = ({
     // Play sound
     playLevelUp();
 
+    // Respect prefers-reduced-motion for users with vestibular disorders
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     // Fire confetti ONLY for perfect day, or milestone WITHOUT relapses
     // Don't celebrate relapses with confetti
-    const shouldFireConfetti = isPerfectDay || (isMilestone && !hasRelapse);
+    // Skip confetti if user prefers reduced motion
+    const shouldFireConfetti = !prefersReducedMotion && (isPerfectDay || (isMilestone && !hasRelapse));
 
     if (shouldFireConfetti) {
       const colors = isMilestone
@@ -72,7 +76,7 @@ const DayCompleteModal = ({
     }, 6000);
 
     return () => clearTimeout(timer);
-  }, [archetypeData, isPerfectDay, isMilestone, onClose]);
+  }, [archetypeData, isPerfectDay, isMilestone, hasRelapse, onClose]);
 
   // Determine title and icon
   const getTitle = () => {

@@ -8,13 +8,12 @@ import {
   PERFECT_DAY_BONUS,
   SIDE_QUESTS,
   SIDE_QUESTS_PER_DAY,
-  DAY_LOCK_HOURS,
   FREQUENCY_TYPES,
   getWeekStart,
   getWeekCompletions,
-  isScheduledDay,
-  isWeekSuccessful
+  isScheduledDay
 } from '../data/gameData';
+import { getTodayYMD, formatDateYMD, startOfLocalDay } from '../lib/dates';
 import {
   saveUserProfile,
   loadUserProfile,
@@ -26,6 +25,20 @@ import {
 
 // Helper function to generate unique IDs
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+// Debounce utility to prevent burst sync traffic
+let syncTimeout = null;
+const SYNC_DEBOUNCE_MS = 300;
+
+const debouncedSync = (syncFn) => {
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+  }
+  syncTimeout = setTimeout(() => {
+    syncFn();
+    syncTimeout = null;
+  }, SYNC_DEBOUNCE_MS);
+};
 
 // Helper function to get daily side quests based on date seed
 const getDailySideQuests = (dateString) => {
@@ -41,30 +54,20 @@ const getDailySideQuests = (dateString) => {
 
 // Helper function to get start of day timestamp
 const getStartOfDay = (date = new Date()) => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-};
-
-// Helper function to get today's date string (YYYY-MM-DD) in LOCAL time
-const getTodayString = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const result = startOfLocalDay(date);
+  return result ? result.getTime() : 0;
 };
 
 // Helper function to check if a date string is today
 const isToday = (dateString) => {
   if (!dateString) return false;
-  return dateString === getTodayString();
+  return dateString === getTodayYMD();
 };
 
 // Helper function to check if it's a new day (past midnight)
 const isNewDay = (lastDateString) => {
   if (!lastDateString) return true;
-  return lastDateString !== getTodayString();
+  return lastDateString !== getTodayYMD();
 };
 
 // Helper function to calculate days since start
@@ -307,7 +310,7 @@ const useGameStore = create(
         });
 
         // Sync to Supabase after onboarding
-        setTimeout(() => get().syncToSupabase(), 100);
+        debouncedSync(() => get().syncToSupabase());
       },
 
       // Add a single habit
@@ -355,7 +358,7 @@ const useGameStore = create(
         const earnedXp = Math.floor(habit.xp * streakMultiplier);
 
         // Add today to completedDates
-        const todayStr = getTodayString();
+        const todayStr = getTodayYMD();
         const newCompletedDates = [...(habit.completedDates || [])];
         if (!newCompletedDates.includes(todayStr)) {
           newCompletedDates.push(todayStr);
@@ -410,7 +413,7 @@ const useGameStore = create(
         }
 
         // Sync to Supabase after completing habit
-        setTimeout(() => get().syncToSupabase(), 100);
+        debouncedSync(() => get().syncToSupabase());
       },
 
       // Undo a habit completion - only allowed if day not yet submitted
@@ -440,7 +443,7 @@ const useGameStore = create(
         });
 
         // Remove today from completedDates
-        const todayStr = getTodayString();
+        const todayStr = getTodayYMD();
         const newCompletedDates = (habit.completedDates || []).filter(d => d !== todayStr);
 
         // Calculate XP to remove (reverse of completeHabit)
@@ -479,7 +482,7 @@ const useGameStore = create(
         });
 
         // Sync to Supabase
-        setTimeout(() => get().syncToSupabase(), 100);
+        debouncedSync(() => get().syncToSupabase());
 
         return { success: true, xpRemoved: xpToRemove };
       },
@@ -531,7 +534,7 @@ const useGameStore = create(
         });
 
         // Sync to Supabase after relapse
-        setTimeout(() => get().syncToSupabase(), 100);
+        debouncedSync(() => get().syncToSupabase());
 
         // Return info for UI feedback
         return {
@@ -609,7 +612,7 @@ const useGameStore = create(
           // The streak represents "days you showed up" not "perfect days"
           const newCurrentStreak = state.currentStreak + 1;
           const newLongestStreak = Math.max(state.longestStreak, newCurrentStreak);
-          const today = getTodayString();
+          const today = getTodayYMD();
 
           // Calculate XP earned today (approximate from habit XP)
           const xpEarned = scheduledHabits
@@ -739,7 +742,7 @@ const useGameStore = create(
 
       // Mark celebration as shown for today
       markCelebrationShown: () => {
-        set({ lastCelebrationDate: getTodayString() });
+        set({ lastCelebrationDate: getTodayYMD() });
       },
 
       // Check if today has been submitted
@@ -776,7 +779,7 @@ const useGameStore = create(
 
       // Refresh side quests for today
       refreshSideQuests: () => {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayYMD();
         const state = get();
 
         // Only refresh if it's a new day
@@ -816,7 +819,7 @@ const useGameStore = create(
         });
 
         // Sync to Supabase after completing side quest
-        setTimeout(() => get().syncToSupabase(), 100);
+        debouncedSync(() => get().syncToSupabase());
 
         return { xpEarned: earnedXp, quest };
       },
@@ -824,7 +827,7 @@ const useGameStore = create(
       // Get today's side quests with completion status
       getSideQuests: () => {
         const state = get();
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayYMD();
 
         // Auto-refresh if needed
         if (state.sideQuestsDate !== today) {
@@ -846,7 +849,7 @@ const useGameStore = create(
         const state = get();
         if (!state.dayStarted) return false;
 
-        const todayString = getTodayString();
+        const todayString = getTodayYMD();
 
         // Check if it's a new day based on lastSubmitDate
         // If lastSubmitDate is not today, we need to check for reset
@@ -1146,7 +1149,16 @@ const useGameStore = create(
     }),
     {
       name: 'habitquest-storage',
-      version: 1
+      version: 1,
+      migrate: (persistedState, version) => {
+        // Migration stub for future schema changes
+        // Add migrations here as needed when version increments
+        if (version === 0) {
+          // Migration from version 0 to 1 (example)
+          return { ...persistedState };
+        }
+        return persistedState;
+      }
     }
   )
 );
