@@ -1,22 +1,53 @@
 import { useState } from 'react';
-import { X, Trash2, Volume2, VolumeX, RotateCcw, LogOut } from 'lucide-react';
+import { X, Trash2, Volume2, VolumeX, RotateCcw, LogOut, Plus, Skull, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import useGameStore from '../context/useGameStore';
 import { useAuth } from '../hooks/useAuth';
 import { CLASSES } from '../data/gameData';
 import soundManager from '../utils/sounds';
 
 const Settings = ({ onClose }) => {
-  const { username, archetype, resetGame, clearSyncState, deleteFromSupabase, xp, level, currentStreak, longestStreak, currentDay } = useGameStore();
+  const { username, archetype, resetGame, clearSyncState, deleteFromSupabase, xp, level, currentStreak, longestStreak, currentDay, habits, addHabit, removeHabit, syncToSupabase } = useGameStore();
   const { signOut } = useAuth();
   const archetypeData = archetype ? CLASSES[archetype] : null;
 
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showHabitManager, setShowHabitManager] = useState(false);
+  const [showAddHabit, setShowAddHabit] = useState(false);
+  const [newHabit, setNewHabit] = useState({ name: '', type: 'power', xp: 20, frequency: 'daily' });
+  const [habitToDelete, setHabitToDelete] = useState(null);
 
   const handleToggleSound = () => {
     const newValue = !soundEnabled;
     setSoundEnabled(newValue);
     soundManager.setEnabled(newValue);
+  };
+
+  const handleAddHabit = (e) => {
+    e.preventDefault();
+    if (!newHabit.name.trim()) return;
+
+    addHabit({
+      name: newHabit.name.trim(),
+      type: newHabit.type,
+      xp: parseInt(newHabit.xp) || 20,
+      frequency: newHabit.frequency
+    });
+
+    // Sync to Supabase
+    setTimeout(() => syncToSupabase(), 100);
+
+    // Reset form
+    setNewHabit({ name: '', type: 'power', xp: 20, frequency: 'daily' });
+    setShowAddHabit(false);
+  };
+
+  const handleRemoveHabit = (habitId) => {
+    removeHabit(habitId);
+    setHabitToDelete(null);
+
+    // Sync to Supabase
+    setTimeout(() => syncToSupabase(), 100);
   };
 
   const handleResetGame = async (e) => {
@@ -146,6 +177,132 @@ const Settings = ({ onClose }) => {
                   : '#333333'
               }} />
             </button>
+          </div>
+
+          {/* Manage Habits */}
+          <div style={styles.section}>
+            <button
+              type="button"
+              style={styles.expandButton}
+              onClick={() => setShowHabitManager(!showHabitManager)}
+            >
+              <h3 style={styles.sectionTitleInline}>Manage Habits</h3>
+              {showHabitManager ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+
+            {showHabitManager && (
+              <div style={styles.habitManager}>
+                {/* Current Habits */}
+                <div style={styles.habitList}>
+                  {habits.map((habit) => (
+                    <div key={habit.id} style={styles.habitItem}>
+                      <div style={styles.habitInfo}>
+                        {habit.type === 'demon' ? (
+                          <Skull size={14} color="#ef4444" />
+                        ) : (
+                          <Zap size={14} color="#22c55e" />
+                        )}
+                        <span style={styles.habitName}>{habit.name}</span>
+                        <span style={styles.habitXp}>{habit.xp} XP</span>
+                      </div>
+                      {habitToDelete === habit.id ? (
+                        <div style={styles.deleteConfirm}>
+                          <button
+                            type="button"
+                            style={styles.confirmDeleteBtn}
+                            onClick={() => handleRemoveHabit(habit.id)}
+                          >
+                            Delete
+                          </button>
+                          <button
+                            type="button"
+                            style={styles.cancelDeleteBtn}
+                            onClick={() => setHabitToDelete(null)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          style={styles.deleteHabitBtn}
+                          onClick={() => setHabitToDelete(habit.id)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add New Habit */}
+                {!showAddHabit ? (
+                  <button
+                    type="button"
+                    style={styles.addHabitBtn}
+                    onClick={() => setShowAddHabit(true)}
+                  >
+                    <Plus size={16} />
+                    Add New Habit
+                  </button>
+                ) : (
+                  <form onSubmit={handleAddHabit} style={styles.addHabitForm}>
+                    <input
+                      type="text"
+                      placeholder="Habit name"
+                      value={newHabit.name}
+                      onChange={(e) => setNewHabit({ ...newHabit, name: e.target.value })}
+                      style={styles.habitInput}
+                      autoFocus
+                    />
+                    <div style={styles.habitOptions}>
+                      <select
+                        value={newHabit.type}
+                        onChange={(e) => setNewHabit({ ...newHabit, type: e.target.value })}
+                        style={styles.habitSelect}
+                      >
+                        <option value="power">Power (Do)</option>
+                        <option value="demon">Demon (Avoid)</option>
+                      </select>
+                      <select
+                        value={newHabit.frequency}
+                        onChange={(e) => setNewHabit({ ...newHabit, frequency: e.target.value })}
+                        style={styles.habitSelect}
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="weekdays">Weekdays</option>
+                        <option value="weekends">Weekends</option>
+                        <option value="3x_week">3x/Week</option>
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="XP"
+                        value={newHabit.xp}
+                        onChange={(e) => setNewHabit({ ...newHabit, xp: e.target.value })}
+                        style={styles.xpInput}
+                        min="5"
+                        max="100"
+                      />
+                    </div>
+                    <div style={styles.addHabitActions}>
+                      <button type="submit" style={styles.saveHabitBtn}>
+                        Add Habit
+                      </button>
+                      <button
+                        type="button"
+                        style={styles.cancelHabitBtn}
+                        onClick={() => {
+                          setShowAddHabit(false);
+                          setNewHabit({ name: '', type: 'power', xp: 20, frequency: 'daily' });
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Sign Out */}
@@ -393,6 +550,166 @@ const styles = {
     fontSize: '0.75rem',
     color: 'rgba(255, 255, 255, 0.3)',
     margin: 0
+  },
+  expandButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: '12px 0',
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#888',
+    cursor: 'pointer'
+  },
+  sectionTitleInline: {
+    fontFamily: '"Bebas Neue", sans-serif',
+    fontSize: '0.875rem',
+    color: 'rgba(255, 255, 255, 0.5)',
+    letterSpacing: '0.1em',
+    margin: 0
+  },
+  habitManager: {
+    marginTop: '12px'
+  },
+  habitList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    marginBottom: '12px'
+  },
+  habitItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px 12px',
+    backgroundColor: '#0a0a0a',
+    borderRadius: '6px'
+  },
+  habitInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flex: 1
+  },
+  habitName: {
+    fontSize: '0.875rem',
+    color: '#ccc',
+    flex: 1
+  },
+  habitXp: {
+    fontSize: '0.75rem',
+    color: '#666'
+  },
+  deleteHabitBtn: {
+    padding: '6px',
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#666',
+    cursor: 'pointer'
+  },
+  deleteConfirm: {
+    display: 'flex',
+    gap: '6px'
+  },
+  confirmDeleteBtn: {
+    padding: '4px 8px',
+    backgroundColor: '#dc2626',
+    border: 'none',
+    borderRadius: '4px',
+    color: '#fff',
+    fontSize: '0.75rem',
+    cursor: 'pointer'
+  },
+  cancelDeleteBtn: {
+    padding: '4px 8px',
+    backgroundColor: '#333',
+    border: 'none',
+    borderRadius: '4px',
+    color: '#888',
+    fontSize: '0.75rem',
+    cursor: 'pointer'
+  },
+  addHabitBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#1a1a1a',
+    border: '1px dashed #333',
+    borderRadius: '6px',
+    color: '#888',
+    fontSize: '0.875rem',
+    cursor: 'pointer'
+  },
+  addHabitForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    padding: '12px',
+    backgroundColor: '#0a0a0a',
+    borderRadius: '6px'
+  },
+  habitInput: {
+    padding: '10px 12px',
+    backgroundColor: '#1a1a1a',
+    border: '1px solid #333',
+    borderRadius: '4px',
+    color: '#fff',
+    fontSize: '0.875rem',
+    outline: 'none'
+  },
+  habitOptions: {
+    display: 'flex',
+    gap: '8px'
+  },
+  habitSelect: {
+    flex: 1,
+    padding: '8px',
+    backgroundColor: '#1a1a1a',
+    border: '1px solid #333',
+    borderRadius: '4px',
+    color: '#fff',
+    fontSize: '0.75rem',
+    outline: 'none'
+  },
+  xpInput: {
+    width: '60px',
+    padding: '8px',
+    backgroundColor: '#1a1a1a',
+    border: '1px solid #333',
+    borderRadius: '4px',
+    color: '#fff',
+    fontSize: '0.75rem',
+    outline: 'none',
+    textAlign: 'center'
+  },
+  addHabitActions: {
+    display: 'flex',
+    gap: '8px'
+  },
+  saveHabitBtn: {
+    flex: 1,
+    padding: '10px',
+    backgroundColor: '#22c55e',
+    border: 'none',
+    borderRadius: '4px',
+    color: '#000',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
+  cancelHabitBtn: {
+    flex: 1,
+    padding: '10px',
+    backgroundColor: '#333',
+    border: 'none',
+    borderRadius: '4px',
+    color: '#888',
+    fontSize: '0.875rem',
+    cursor: 'pointer'
   }
 };
 
