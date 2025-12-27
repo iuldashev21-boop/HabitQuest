@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
@@ -10,8 +10,19 @@ const Auth = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+  const [rememberMe, setRememberMe] = useState(() => {
+    // Default to true, or load saved preference
+    const saved = localStorage.getItem('habitquest-remember-me');
+    return saved !== 'false';
+  });
 
   const { signUp, signIn } = useAuth();
+
+  // Save "Remember me" preference
+  useEffect(() => {
+    localStorage.setItem('habitquest-remember-me', String(rememberMe));
+  }, [rememberMe]);
+
   const isSignUp = mode === 'signup';
   const isReset = mode === 'reset';
 
@@ -98,6 +109,19 @@ const Auth = () => {
               minLength={6}
               required
             />
+          )}
+
+          {/* Remember Me checkbox - only show on sign in */}
+          {!isSignUp && !isReset && (
+            <label style={styles.rememberMe}>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={styles.checkbox}
+              />
+              <span>Remember me</span>
+            </label>
           )}
 
           {error && <p style={styles.error}>{error}</p>}
@@ -245,6 +269,21 @@ const styles = {
     fontSize: '0.875rem',
     textAlign: 'center',
     margin: 0
+  },
+  rememberMe: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    userSelect: 'none'
+  },
+  checkbox: {
+    width: '18px',
+    height: '18px',
+    accentColor: '#ffffff',
+    cursor: 'pointer'
   }
 };
 

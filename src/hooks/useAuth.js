@@ -53,6 +53,25 @@ export const useAuth = () => {
     };
   }, []);
 
+  // Handle "Remember me" - sign out on browser close if not checked
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const shouldRemember = localStorage.getItem('habitquest-remember-me') !== 'false';
+      if (!shouldRemember && user) {
+        // Clear all Supabase auth tokens from localStorage
+        // Supabase stores tokens with keys starting with 'sb-'
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [user]);
+
   const signUp = async (email, password, username) => {
     const { data, error } = await supabase.auth.signUp({
       email,

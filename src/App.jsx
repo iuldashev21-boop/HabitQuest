@@ -78,6 +78,7 @@ function App() {
 function MainApp({ userId }) {
   const [activeTab, setActiveTab] = useState('command');
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   const {
     username,
@@ -96,29 +97,32 @@ function MainApp({ userId }) {
     isSyncing
   } = useGameStore();
 
-  const [showWelcome, setShowWelcome] = useState(!username);
+  // FIXED: Initialize showWelcome to false, only set to true AFTER data has loaded
+  // and we've confirmed user has no existing profile
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // Load data from Supabase on mount
   useEffect(() => {
     const loadData = async () => {
       if (userId) {
         setIsLoadingData(true);
-        await loadFromSupabase(userId);
+        const result = await loadFromSupabase(userId);
+        setDataLoaded(true);
         setIsLoadingData(false);
+
+        // FIXED: Only show welcome screen if data loaded successfully
+        // AND user has no existing profile (new user)
+        if (result && result.success && !result.hasData) {
+          // New user - no data in Supabase
+          setShowWelcome(true);
+        }
       }
     };
     loadData();
   }, [userId, loadFromSupabase]);
 
-  // Update welcome state when username changes
-  useEffect(() => {
-    if (username) {
-      setShowWelcome(false);
-    }
-  }, [username]);
-
   // Show loading screen while syncing from Supabase
-  if (isLoadingData) {
+  if (isLoadingData || !dataLoaded) {
     return (
       <div style={styles.loadingContainer}>
         <h1 style={styles.loadingText}>HABITQUEST</h1>
@@ -186,55 +190,60 @@ function MainApp({ userId }) {
 
   // ========== RENDER ONBOARDING SCREENS ==========
 
-  // Step 0: Welcome screen (only show if no existing data)
-  if (showWelcome && !username) {
-    return <Welcome onBegin={handleWelcomeComplete} />;
-  }
+  // FIXED: Check if user has completed onboarding by checking if habits exist
+  // This is the most reliable indicator that onboarding was completed
+  const hasCompletedOnboarding = habits && habits.length > 0;
 
-  // Step 1: Profile setup
-  if (!username) {
-    return (
-      <ProfileSetup
-        onComplete={handleProfileComplete}
-        onBack={handleProfileBack}
-      />
-    );
-  }
+  // If user has NOT completed onboarding, show onboarding screens
+  if (!hasCompletedOnboarding) {
+    // Step 0: Welcome screen (only for new users)
+    if (showWelcome && !username) {
+      return <Welcome onBegin={handleWelcomeComplete} />;
+    }
 
-  // Step 2: Commitment questions
-  if (!commitmentAnswers) {
-    return (
-      <CommitmentQuestions
-        onComplete={handleCommitmentComplete}
-        onCancel={handleCommitmentCancel}
-        onBack={handleCommitmentBack}
-      />
-    );
-  }
+    // Step 1: Profile setup
+    if (!username) {
+      return (
+        <ProfileSetup
+          onComplete={handleProfileComplete}
+          onBack={handleProfileBack}
+        />
+      );
+    }
 
-  // Step 3: Archetype selection
-  if (!archetype) {
-    return (
-      <ArchetypeSelect
-        onSelect={handleArchetypeSelect}
-        onBack={handleArchetypeBack}
-      />
-    );
-  }
+    // Step 2: Commitment questions
+    if (!commitmentAnswers) {
+      return (
+        <CommitmentQuestions
+          onComplete={handleCommitmentComplete}
+          onCancel={handleCommitmentCancel}
+          onBack={handleCommitmentBack}
+        />
+      );
+    }
 
-  // Step 4: Difficulty selection
-  if (!difficulty) {
-    return (
-      <DifficultySelect
-        archetype={archetype}
-        onSelect={handleDifficultySelect}
-        onBack={handleDifficultyBack}
-      />
-    );
-  }
+    // Step 3: Archetype selection
+    if (!archetype) {
+      return (
+        <ArchetypeSelect
+          onSelect={handleArchetypeSelect}
+          onBack={handleArchetypeBack}
+        />
+      );
+    }
 
-  // Step 5: Habit customization
-  if (habits.length === 0) {
+    // Step 4: Difficulty selection
+    if (!difficulty) {
+      return (
+        <DifficultySelect
+          archetype={archetype}
+          onSelect={handleDifficultySelect}
+          onBack={handleDifficultyBack}
+        />
+      );
+    }
+
+    // Step 5: Habit customization
     return (
       <HabitCustomize
         archetype={archetype}
