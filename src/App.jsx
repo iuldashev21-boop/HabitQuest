@@ -15,6 +15,15 @@ import Records from './components/Records';
 import Navigation from './components/Navigation';
 import './App.css';
 
+/**
+ * Root application component that enforces auth initialization and access control.
+ *
+ * Renders a fullscreen loading view while authentication is initializing. Once initialized,
+ * renders the Auth component if the user is not authenticated, otherwise renders MainApp
+ * for the authenticated user.
+ *
+ * @returns {JSX.Element} The top-level UI: a loading screen, the Auth component, or MainApp with the authenticated user's ID.
+ */
 function App() {
   const { user, loading, isAuthenticated, initialized } = useAuth();
 
