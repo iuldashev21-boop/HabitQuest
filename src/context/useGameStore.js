@@ -619,10 +619,9 @@ const useGameStore = create(
             .filter((h) => h.completed)
             .reduce((sum, h) => sum + h.xp, 0);
 
-          // Calculate day number
-          const dayNumber = state.dayStarted
-            ? Math.floor((Date.now() - state.dayStarted) / (1000 * 60 * 60 * 24)) + 1
-            : 1;
+          // Calculate day number based on completed days, not elapsed time
+          // This ensures day numbers are sequential (1, 2, 3...) regardless of timing
+          const dayNumber = state.totalDaysCompleted + 1;
 
           // Count relapses
           const relapseCount = scheduledHabits.filter((h) => h.relapsedToday).length;
