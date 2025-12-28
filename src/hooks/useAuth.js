@@ -14,21 +14,27 @@ export const useAuth = () => {
     let isMounted = true;
 
     // Handle "Remember me" - check if this is a new browser session
+    // Wrapped in try/catch to prevent auth initialization failure
     const checkRememberMe = async () => {
-      const shouldRemember = localStorage.getItem('habitquest-remember-me') !== 'false';
-      const isExistingSession = sessionStorage.getItem(SESSION_MARKER);
+      try {
+        const shouldRemember = localStorage.getItem('habitquest-remember-me') !== 'false';
+        const isExistingSession = sessionStorage.getItem(SESSION_MARKER);
 
-      // If remember me is false and this is a new browser session, sign out
-      if (!shouldRemember && !isExistingSession) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          // Sign out properly through Supabase
-          await supabase.auth.signOut();
+        // If remember me is false and this is a new browser session, sign out
+        if (!shouldRemember && !isExistingSession) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            // Sign out properly through Supabase
+            await supabase.auth.signOut();
+          }
         }
-      }
 
-      // Mark this browser session as active
-      sessionStorage.setItem(SESSION_MARKER, 'true');
+        // Mark this browser session as active
+        sessionStorage.setItem(SESSION_MARKER, 'true');
+      } catch (err) {
+        // Log but don't throw - allow auth to continue
+        console.warn('Remember-me check failed:', err);
+      }
     };
 
     // Get initial session

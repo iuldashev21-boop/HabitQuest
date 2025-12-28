@@ -719,7 +719,8 @@ const useGameStore = create(
             achievements: newAchievements
           });
 
-          // Sync to Supabase after day submission
+          // Critical: Day submission syncs immediately (not debounced) to ensure
+          // daily log is saved promptly. Short delay allows state to settle first.
           setTimeout(() => {
             get().syncToSupabase();
             get().syncDailyLog(historyEntry);
