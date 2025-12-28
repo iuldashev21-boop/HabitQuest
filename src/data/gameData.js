@@ -774,11 +774,19 @@ export const isScheduledDay = (frequency, date = new Date()) => {
 
 // Helper to count completions in current week
 export const getWeekCompletions = (completedDates = [], date = new Date()) => {
+  if (!Array.isArray(completedDates)) {
+    return 0;
+  }
   const weekStart = getWeekStart(date);
   const weekEnd = getWeekEnd(date);
 
   return completedDates.filter(dateStr => {
-    const d = new Date(dateStr);
+    if (!dateStr || typeof dateStr !== 'string') return false;
+    // Parse YYYY-MM-DD in local timezone to avoid off-by-one errors
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return false;
+    const [, year, month, day] = match;
+    const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     return d >= weekStart && d <= weekEnd;
   }).length;
 };
@@ -892,6 +900,10 @@ export const PHASES = {
 
 // Helper function to get current phase based on day
 export const getPhase = (day) => {
+  // Input validation
+  if (typeof day !== 'number' || isNaN(day) || day < 1) {
+    return PHASES.FRAGILE;
+  }
   if (day <= 22) return PHASES.FRAGILE;
   if (day <= 44) return PHASES.BUILDING;
   if (day <= 66) return PHASES.LOCKED_IN;
@@ -900,6 +912,10 @@ export const getPhase = (day) => {
 
 // Helper function to get streak multiplier
 export const getStreakMultiplier = (streak) => {
+  // Input validation
+  if (typeof streak !== 'number' || isNaN(streak) || streak < 0) {
+    return 1.0;
+  }
   if (streak >= 66) return STREAK_MULTIPLIERS[66];
   if (streak >= 30) return STREAK_MULTIPLIERS[30];
   if (streak >= 7) return STREAK_MULTIPLIERS[7];
@@ -908,16 +924,31 @@ export const getStreakMultiplier = (streak) => {
 
 // Helper function to calculate level from XP
 export const calculateLevel = (xp) => {
+  // Input validation
+  if (typeof xp !== 'number' || isNaN(xp) || xp < 0) {
+    return 1;
+  }
   return Math.floor(xp / XP_PER_LEVEL) + 1;
 };
 
 // Helper function to get XP progress within current level
 export const getLevelProgress = (xp) => {
+  // Input validation
+  if (typeof xp !== 'number' || isNaN(xp) || xp < 0) {
+    return 0;
+  }
   return xp % XP_PER_LEVEL;
 };
 
 // Helper function to get rank based on level and class
 export const getRank = (classId, level) => {
+  // Input validation
+  if (!classId || typeof classId !== 'string') {
+    return null;
+  }
+  if (typeof level !== 'number' || isNaN(level) || level < 1) {
+    level = 1;
+  }
   const classData = CLASSES[classId];
   if (!classData) return null;
 

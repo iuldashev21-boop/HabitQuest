@@ -1,21 +1,55 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+
+// Session marker key - exists only while browser tab is open
+const SESSION_MARKER = 'habitquest-session-active';
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
 
+    // Handle "Remember me" - check if this is a new browser session
+    // Wrapped in try/catch to prevent auth initialization failure
+    const checkRememberMe = async () => {
+      try {
+        const shouldRemember = localStorage.getItem('habitquest-remember-me') !== 'false';
+        const isExistingSession = sessionStorage.getItem(SESSION_MARKER);
+
+        // If remember me is false and this is a new browser session, sign out
+        if (!shouldRemember && !isExistingSession) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            // Sign out properly through Supabase
+            await supabase.auth.signOut();
+          }
+        }
+
+        // Mark this browser session as active
+        sessionStorage.setItem(SESSION_MARKER, 'true');
+      } catch (err) {
+        // Log but don't throw - allow auth to continue
+        console.warn('Remember-me check failed:', err);
+      }
+    };
+
     // Get initial session
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // First check remember me status
+        await checkRememberMe();
 
-        if (error) {
-          console.error('Auth session error:', error);
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error('Auth session error:', sessionError);
+          if (isMounted) {
+            setError(sessionError.message);
+          }
         }
 
         if (isMounted) {
@@ -27,6 +61,7 @@ export const useAuth = () => {
         console.error('Auth initialization error:', err);
         if (isMounted) {
           setUser(null);
+          setError(err.message || 'Authentication failed');
           setLoading(false);
           setInitialized(true);
         }
@@ -40,7 +75,6 @@ export const useAuth = () => {
       (_event, session) => {
         if (isMounted) {
           setUser(session?.user ?? null);
-          // Also set loading to false in case this fires before getSession completes
           setLoading(false);
           setInitialized(true);
         }
@@ -52,25 +86,6 @@ export const useAuth = () => {
       subscription.unsubscribe();
     };
   }, []);
-
-  // Handle "Remember me" - sign out on browser close if not checked
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      const shouldRemember = localStorage.getItem('habitquest-remember-me') !== 'false';
-      if (!shouldRemember && user) {
-        // Clear all Supabase auth tokens from localStorage
-        // Supabase stores tokens with keys starting with 'sb-'
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-            localStorage.removeItem(key);
-          }
-        });
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [user]);
 
   const signUp = async (email, password, username) => {
     const { data, error } = await supabase.auth.signUp({
@@ -92,18 +107,24 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    const { error: signOutError } = await supabase.auth.signOut();
+    return { error: signOutError };
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   return {
     user,
     loading,
     initialized,
+    error,
     isAuthenticated: !!user,
     signUp,
     signIn,
-    signOut
+    signOut,
+    clearError
   };
 };
 

@@ -4,7 +4,7 @@ import {
   ChevronDown, ChevronUp, BookOpen, Filter
 } from 'lucide-react';
 import useGameStore from '../context/useGameStore';
-import { CLASSES, getStreakMultiplier, PERFECT_DAY_BONUS } from '../data/gameData';
+import { CLASSES, PERFECT_DAY_BONUS } from '../data/gameData';
 
 // Helper to format date
 const formatDate = (dateStr) => {

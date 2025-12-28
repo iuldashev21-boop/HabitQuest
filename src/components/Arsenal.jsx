@@ -8,6 +8,7 @@ import useGameStore from '../context/useGameStore';
 import { useAuth } from '../hooks/useAuth';
 import { CLASSES, XP_PER_LEVEL } from '../data/gameData';
 import { setSoundEnabled } from '../utils/sounds';
+import { clearHabitQuestStorage } from '../lib/storage';
 
 // Achievement definitions with keys matching store
 const ACHIEVEMENTS = [
@@ -190,8 +191,8 @@ const Arsenal = () => {
       // Delete data from Supabase FIRST
       await deleteFromSupabase();
 
-      // Clear localStorage
-      localStorage.clear();
+      // Clear HabitQuest-specific localStorage (scoped cleanup)
+      clearHabitQuestStorage();
 
       // Reset local state
       resetGame();

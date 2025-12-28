@@ -4,6 +4,7 @@ import useGameStore from '../context/useGameStore';
 import { useAuth } from '../hooks/useAuth';
 import { CLASSES } from '../data/gameData';
 import soundManager from '../utils/sounds';
+import { clearHabitQuestStorage } from '../lib/storage';
 
 const Settings = ({ onClose }) => {
   const { username, archetype, resetGame, clearSyncState, deleteFromSupabase, xp, level, currentStreak, longestStreak, currentDay, habits, addHabit, removeHabit, syncToSupabase } = useGameStore();
@@ -60,8 +61,8 @@ const Settings = ({ onClose }) => {
       // Delete data from Supabase FIRST
       await deleteFromSupabase();
 
-      // Clear localStorage
-      localStorage.clear();
+      // Clear HabitQuest-specific localStorage (scoped cleanup)
+      clearHabitQuestStorage();
 
       // Reset local state
       resetGame();

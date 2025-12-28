@@ -3,6 +3,7 @@ import useGameStore from './context/useGameStore';
 import { useAuth } from './hooks/useAuth';
 import Auth from './components/Auth';
 import ResetPassword from './components/ResetPassword';
+import ErrorBoundary from './components/ErrorBoundary';
 import Welcome from './components/Welcome';
 import ProfileSetup from './components/ProfileSetup';
 import CommitmentQuestions from './components/CommitmentQuestions';
@@ -71,19 +72,22 @@ function App() {
     console.log('[Auth] User authenticated:', user.id);
   }
   // User is verified as logged in, show main app with user ID
-  return <MainApp userId={user.id} />;
+  return (
+    <ErrorBoundary>
+      <MainApp userId={user.id} />
+    </ErrorBoundary>
+  );
 }
 
 // Main app component (shown after login)
 function MainApp({ userId }) {
   const [activeTab, setActiveTab] = useState('command');
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const [loadState, setLoadState] = useState('loading'); // 'loading' | 'loaded' | 'error'
+  const [loadError, setLoadError] = useState(null);
 
   const {
     username,
     commitmentAnswers,
-    onboardingComplete,
     archetype,
     difficulty,
     habits,
@@ -93,40 +97,72 @@ function MainApp({ userId }) {
     setDifficulty,
     initializeHabits,
     resetGame,
-    loadFromSupabase,
-    isSyncing
+    loadFromSupabase
   } = useGameStore();
 
-  // FIXED: Initialize showWelcome to false, only set to true AFTER data has loaded
+  // Initialize showWelcome to false, only set to true AFTER data has loaded
   // and we've confirmed user has no existing profile
   const [showWelcome, setShowWelcome] = useState(false);
 
-  // Load data from Supabase on mount
-  useEffect(() => {
-    const loadData = async () => {
-      if (userId) {
-        setIsLoadingData(true);
-        const result = await loadFromSupabase(userId);
-        setDataLoaded(true);
-        setIsLoadingData(false);
+  // Shared load function used by both initial load and retry
+  const performLoad = async () => {
+    if (!userId) return;
 
-        // FIXED: Only show welcome screen if data loaded successfully
-        // AND user has no existing profile (new user)
-        if (result && result.success && !result.hasData) {
-          // New user - no data in Supabase
+    setLoadState('loading');
+    setLoadError(null);
+
+    try {
+      const result = await loadFromSupabase(userId);
+
+      if (result && result.success) {
+        setLoadState('loaded');
+        // Only show welcome screen if user has no existing profile (new user)
+        if (!result.hasData) {
           setShowWelcome(true);
         }
+      } else {
+        setLoadState('error');
+        setLoadError(result?.error?.message || 'Failed to load data');
       }
-    };
-    loadData();
-  }, [userId, loadFromSupabase]);
+    } catch (err) {
+      setLoadState('error');
+      setLoadError(err.message || 'An unexpected error occurred');
+    }
+  };
+
+  // Load data from Supabase on mount
+  useEffect(() => {
+    performLoad();
+  }, [userId]);
+
+  // Handle retry - reuse the same load function
+  const handleRetry = () => {
+    performLoad();
+  };
 
   // Show loading screen while syncing from Supabase
-  if (isLoadingData || !dataLoaded) {
+  if (loadState === 'loading') {
     return (
       <div style={styles.loadingContainer}>
         <h1 style={styles.loadingText}>HABITQUEST</h1>
         <p style={styles.syncingText}>Syncing data...</p>
+      </div>
+    );
+  }
+
+  // Show error screen with retry option
+  if (loadState === 'error') {
+    return (
+      <div style={styles.loadingContainer}>
+        <h1 style={{ ...styles.loadingText, color: '#ef4444' }}>Sync Failed</h1>
+        <p style={styles.syncingText}>{loadError || 'Failed to load data'}</p>
+        <button
+          onClick={handleRetry}
+          style={styles.retryButton}
+          type="button"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -308,6 +344,17 @@ const styles = {
     color: 'rgba(255, 255, 255, 0.5)',
     fontSize: '0.9rem',
     marginTop: '8px'
+  },
+  retryButton: {
+    marginTop: '20px',
+    padding: '12px 32px',
+    backgroundColor: '#22c55e',
+    color: '#000',
+    border: 'none',
+    borderRadius: '8px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    fontSize: '1rem'
   }
 };
 

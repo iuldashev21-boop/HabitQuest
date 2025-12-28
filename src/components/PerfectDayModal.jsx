@@ -10,44 +10,49 @@ const PerfectDayModal = ({ archetype, onClose }) => {
     // Play sound
     playPerfectDay();
 
-    // Fire confetti
-    const duration = 3000;
-    const end = Date.now() + duration;
+    // Respect prefers-reduced-motion for users with vestibular disorders
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const colors = [archetypeData.colors.accent, '#fbbf24', '#ffffff'];
+    // Fire confetti only if motion is allowed
+    if (!prefersReducedMotion) {
+      const duration = 3000;
+      const end = Date.now() + duration;
 
-    const frame = () => {
-      confetti({
-        particleCount: 3,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0, y: 0.7 },
-        colors: colors
-      });
-      confetti({
-        particleCount: 3,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1, y: 0.7 },
-        colors: colors
-      });
+      const colors = [archetypeData.colors.accent, '#fbbf24', '#ffffff'];
 
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
-      }
-    };
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.7 },
+          colors: colors
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.7 },
+          colors: colors
+        });
 
-    frame();
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
 
-    // Big burst
-    setTimeout(() => {
-      confetti({
-        particleCount: 100,
-        spread: 100,
-        origin: { x: 0.5, y: 0.5 },
-        colors: colors
-      });
-    }, 500);
+      frame();
+
+      // Big burst
+      setTimeout(() => {
+        confetti({
+          particleCount: 100,
+          spread: 100,
+          origin: { x: 0.5, y: 0.5 },
+          colors: colors
+        });
+      }, 500);
+    }
 
     // Auto close after 4 seconds
     const timer = setTimeout(() => {
